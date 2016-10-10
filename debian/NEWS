@@ -1,0 +1,7 @@
+hamster-applet (2.91.3+git20110714.9aefd7-1) experimental; urgency=low
+
+  * Starting from this version, hamster is no longer a GNOME panel 
+    applet, but a standalone application. You can run it from the menus, 
+    and it will use the notification area to remain one click away.
+
+ -- Josselin Mouette <joss@debian.org>  Fri, 19 Aug 2011 20:44:02 +0200

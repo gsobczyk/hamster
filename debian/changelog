@@ -1,0 +1,12 @@
+hamster-rt (1.03.3.1) precise; urgency=low
+
+  * small fixes to integration from upstreams
+
+ -- Tomasz Sarnowski <sarnowskitomek@gmail.com>  Sat, 17 Nov 2013 18:33:42 -0800
+
+
+hamster-rt (1.03.3.0) precise; urgency=low
+
+  * Initial release.
+
+ -- Tomasz Sarnowski <sarnowskitomek@gmail.com>  Sat, 13 Oct 2013 19:27:42 -0800

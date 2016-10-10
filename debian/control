@@ -1,0 +1,46 @@
+Source: hamster-rt
+Section: gnome
+Priority: optional
+Maintainer: Tomasz Sarnowski <sarnowskitomek@gmail.com>
+Build-Depends: cdbs (>= 0.4.90~),
+               debhelper (>= 8),
+               python (>= 2.6.6-3~),
+               pkg-config,
+               intltool (>= 0.37.1),
+               gnome-doc-utils (>= 0.17.3),
+               gnome-control-center-dev
+Standards-Version: 3.9.2
+Homepage: http://live.gnome.org/ProjectHamster
+X-Python-Version: >= 2.5
+
+Package: hamster-rt
+Architecture: all
+Depends: ${misc:Depends},
+         ${python:Depends},
+         python (>= 2.5),
+         python-cairo,
+         python-gtk2 (>= 2.12.0),
+         python-gconf,
+         python-dbus,
+         python-gobject (>= 2.14.0),
+         python-wnck,
+         python-gnome2,
+         python-xdg,
+	python-requests,
+	python-beaker
+Recommends: python-notify,
+            gnome-icon-theme
+Suggests: python-evolution
+Replaces: hamster-applet,
+	hamster-time-tracker
+Conflicts: hamster-applet,
+	hamster-time-tracker
+Description: time tracking applet for GNOME
+ Project Hamster helps you to keep track of how much time you spend on various
+ activities during the day.  Whenever you move from one task to another, you
+ change your current activity in the GNOME applet.
+ .
+ It can present graphical statistics of how long you have spent on each task,
+ and may be useful for project management or keeping employee timesheets.
+ .
+ This version adds integration with RT (http://www.bestpractical.com/rt/)

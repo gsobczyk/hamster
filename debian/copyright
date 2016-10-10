@@ -1,0 +1,20 @@
+Format-Specification: http://wiki.debian.org/Proposals/CopyrightFormat
+Upstream-Name: hamster-rt
+Upstream-Maintainer: Grzegorz Sobczyk <grzegorz.sobczyk@contium.pl>
+Upstream-Source: https://github.com/gsobczyk/hamster
+
+Files: *
+Copyright: Copyright (C) 2007-2009 Patryk Zawadzki <patrys at pld-linux.org>
+ Copyright (C) 2008-2010 Toms Bauģis <toms.baugis at gmail.com>
+ Copyright (C) 2008 Pēteris Caune <cuu508 at gmail.com>
+ Copyright (C) 2008, J. Fèlix Ontañón <fontanon at emergya dot es>
+ Copyright (C) 2008 Pēteris Caune <cuu508 at gmail.com>
+ Copyright (C) 2008 Nathan Samson <nathansamson at gmail dot com> 
+ Copyright (C) 2008 Giorgos Logiotatidis <seadog at sealabs dot net>
+ Copyright (C) 1996, 2008 Free Software Foundation, Inc
+ Copyright (C) 2009-2010 Rico Tzschichholz <ricotz@t-online.de>
+ Copyright (C) 2009-2010 Jason Smith <jassmith@gmail.com>
+ Copyright (C) 2013 Grzegorz Sobczyk <grzegorz.sobczyk@contium.pl>
+License: GPL-3
+ The full text of the GPL is distributed in
+ /usr/share/common-licenses/GPL-3 on Debian systems.
