@@ -21,7 +21,6 @@
 import gtk
 import logging
 # from configuration import conf
-import gobject
 import re
 import dbus.mainloop.glib
 import json
@@ -33,19 +32,21 @@ from beaker.cache import cache_regions, cache_region
 jira_active = True
 try:
     from jira.client import JIRA
-except:
+except ImportError:
+    JIRA = None
     jira_active = False
 
 try:
     import evolution
     from evolution import ecal
-except:
+except ImportError:
+    ecal = None
     evolution = None
 
 # configure regions
 cache_regions.update({
-    'short_term':{
-        'expire': 60*1000,
+    'short_term': {
+        'expire': 60 * 1000,
         'type': 'memory',
         'key_length': 250
     }
@@ -60,7 +61,9 @@ SOURCE_REDMINE = 'redmine'
 SOURCE_JIRA = 'jira'
 JIRA_ISSUE_NAME_REGEX = "^(\w+-\d+): "
 ERROR_ADDITIONAL_MESSAGE = '\n\nCheck settings and reopen main window.'
-MIN_QUERY_LENGTH = 4
+MIN_QUERY_LENGTH = 3
+CURRENT_USER_ACTIVITIES_LIMIT = 5
+
 
 class ActivitiesSource(object):
     def __init__(self, conf):
@@ -85,7 +88,7 @@ class ActivitiesSource(object):
 
     def __connect(self, conf):
         if self.source == SOURCE_EVOLUTION and not evolution:
-            self.source = SOURCE_NONE # on failure pretend that there is no evolution
+            self.source = SOURCE_NONE  # on failure pretend that there is no evolution
         elif self.source == SOURCE_GTG:
             dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
         elif self.source == SOURCE_RT:
@@ -101,16 +104,15 @@ class ActivitiesSource(object):
         self.redmine_pass = conf.get("redmine_pass")
         try:
             self.redmine_query = json.loads(conf.get("redmine_query"))
-        except:
+        except Exception:
             self.redmine_query = ({})
         if self.redmine_url and self.redmine_user and self.redmine_pass:
-            self.redmine = redmine.Redmine(self.redmine_url, auth=(self.redmine_user,self.redmine_pass))
+            self.redmine = redmine.Redmine(self.redmine_url, auth=(self.redmine_user, self.redmine_pass))
             self.redmine.getIssue(7783)
             if not self.redmine:
                 self.source = SOURCE_NONE
         else:
             self.source = SOURCE_NONE
-
 
     def __connect_to_jira(self, conf):
         self.jira_url = conf.get("jira_url")
@@ -118,7 +120,7 @@ class ActivitiesSource(object):
         self.jira_pass = conf.get("jira_pass")
         self.jira_query = conf.get("jira_query")
         self.jira_category = conf.get("jira_category_field")
-        self.jira_fields=','.join(['summary', self.jira_category, 'issuetype'])
+        self.jira_fields = ','.join(['summary', self.jira_category, 'issuetype'])
         logger.info("user: %s, pass: *****" % self.jira_user)
         if self.jira_url and self.jira_user and self.jira_pass:
             options = {'server': self.jira_url}
@@ -141,7 +143,7 @@ class ActivitiesSource(object):
         else:
             self.source = SOURCE_NONE
 
-    def get_activities(self, query = None):
+    def get_activities(self, query=None):
         if not self.source or not query:
             return []
 
@@ -157,10 +159,12 @@ class ActivitiesSource(object):
                     direct_ticket = self.__extract_activity_from_rt_ticket(ticket)
             if direct_ticket:
                 activities.append(direct_ticket)
-            if len(activities) <= 2 and not direct_ticket and len(query) >= MIN_QUERY_LENGTH:
+            if len(activities) <= CURRENT_USER_ACTIVITIES_LIMIT and not direct_ticket and len(
+                    query) >= MIN_QUERY_LENGTH:
                 li = query.split(' ')
-                rt_query = " AND ".join(["(Subject LIKE '%s' OR Owner='%s')" % (q, q) for q in li]) + " AND (Status='new' OR Status='open')"
-                #logging.warn(rt_query)
+                rt_query = " AND ".join(
+                    ["(Subject LIKE '%s' OR Owner='%s')" % (q, q) for q in li]) + " AND (Status='new' OR Status='open')"
+                # logging.warn(rt_query)
                 third_activities = self.__extract_from_rt(query, rt_query, False)
                 if activities and third_activities:
                     activities.append({"name": "---------------------", "category": "other open"})
@@ -175,7 +179,7 @@ class ActivitiesSource(object):
                     direct_issue = self.__extract_activity_from_jira_issue(issue)
             if direct_issue:
                 activities.append(direct_issue)
-            if len(activities) <= 2 and not direct_issue and len(query) >= MIN_QUERY_LENGTH:
+            if len(activities) <= CURRENT_USER_ACTIVITIES_LIMIT and not direct_issue and len(query) >= MIN_QUERY_LENGTH:
                 li = query.split(' ')
                 fragments = filter(len, [self.__generate_fragment_jira_query(word) for word in li])
                 jira_query = " AND ".join(fragments) + " AND resolution = Unresolved order by priority desc, updated desc"
@@ -194,9 +198,9 @@ class ActivitiesSource(object):
                     direct_issue = self.__extract_activity_from_issue(issue)
             if direct_issue:
                 activities.append(direct_issue)
-            if len(activities) <= 2 and not direct_issue and len(query) >= MIN_QUERY_LENGTH:
+            if len(activities) <= CURRENT_USER_ACTIVITIES_LIMIT and not direct_issue and len(query) >= MIN_QUERY_LENGTH:
                 redmine_query = ({'status_id': 'open', 'subject': query})
-                #logging.warn(redmine_query)
+                # logging.warn(redmine_query)
                 third_activities = self.__extract_from_redmine(query, redmine_query)
                 if activities and third_activities:
                     activities.append({"name": "---------------------", "category": "other open"})
@@ -212,10 +216,9 @@ class ActivitiesSource(object):
             tasks = []
             try:
                 tasks = conn.GetTasks()
-            except dbus.exceptions.DBusException:  #TODO too lame to figure out how to connect to the disconnect signal
+            except dbus.exceptions.DBusException:  # TODO too lame to figure out how to connect to the disconnect signal
                 self.__gtg_connection = None
-                return self.get_activities(query) # reconnect
-
+                return self.get_activities(query)  # reconnect
 
             for task in tasks:
                 if query is None or task['title'].lower().startswith(query):
@@ -249,40 +252,40 @@ class ActivitiesSource(object):
             #             try:
             issue = self.jira.issue(activity_id)
             return self.__extract_activity_from_jira_issue(issue)
-        #             except Exception as e:
+        # except Exception as e:
         #                 logging.warn(e)
         #                 return ""
         else:
             return ""
 
     def __extract_activity_from_rt_ticket(self, ticket):
-        #activity = {}
+        # activity = {}
         ticket_id = ticket['id']
-        #logging.warn(ticket)
+        # logging.warn(ticket)
         if 'ticket/' in ticket_id:
             ticket_id = ticket_id[7:]
-        ticket['name'] = '#'+ticket_id+': '+ticket['Subject'].replace(",", " ")
-        if 'Owner' in ticket and ticket['Owner']!=self.rt_user:
+        ticket['name'] = '#' + ticket_id + ': ' + ticket['Subject'].replace(",", " ")
+        if 'Owner' in ticket and ticket['Owner'] != self.rt_user:
             ticket['name'] += " (%s)" % ticket['Owner']
         ticket['category'] = self.__extract_cat_from_ticket(ticket)
-        ticket['rt_id']=ticket_id;
+        ticket['rt_id'] = ticket_id
         return ticket
 
     def __extract_activity_from_issue(self, issue):
         activity = {}
         issue_id = issue.id
-        activity['name'] = '#'+str(issue_id)+': '+issue.subject
-        activity['rt_id']=issue_id;
-        activity['category']="";
+        activity['name'] = '#' + str(issue_id) + ': ' + issue.subject
+        activity['rt_id'] = issue_id
+        activity['category'] = ""
         return activity
 
     def __extract_activity_from_jira_issue(self, issue):
         activity = {}
         issue_id = issue.key
-        activity['name'] = str(issue_id)+': '+issue.fields.summary.replace(",", " ")
+        activity['name'] = str(issue_id) + ': ' + issue.fields.summary.replace(",", " ")
         activity['rt_id'] = issue_id
         if hasattr(issue.fields, self.jira_category):
-            activity['category'] = getattr(issue.fields, self.jira_category)
+            activity['category'] = str(getattr(issue.fields, self.jira_category))
         else:
             activity['category'] = ""
         if not activity['category']:
@@ -292,17 +295,19 @@ class ActivitiesSource(object):
                 logger.warn(str(e))
         return activity
 
-    def __extract_from_rt(self, query = None, rt_query = None, checkName = True):
+    def __extract_from_rt(self, query='', rt_query=None, check_name=True):
         activities = []
         #         results = self.rt.search_simple(rt_query)
         results = self.rt.search_raw(rt_query, [self.rt_category])
         for ticket in results:
             activity = self.__extract_activity_from_rt_ticket(ticket)
-            if query is None or not checkName or all(item in activity['name'].lower() for item in query.lower().split(' ')):
+            if query is None \
+                    or not check_name \
+                    or all(item in activity['name'].lower() for item in query.lower().split(' ')):
                 activities.append(activity)
         return activities
 
-    def __extract_from_redmine(self, query = None, rt_query = None):
+    def __extract_from_redmine(self, query='', rt_query=None):
         activities = []
         results = self.redmine.getIssues(rt_query)
         for issue in results:
@@ -311,7 +316,7 @@ class ActivitiesSource(object):
                 activities.append(activity)
         return activities
 
-    def __extract_from_jira(self, query = None, jira_query = None):
+    def __extract_from_jira(self, query='', jira_query=None):
         activities = []
         try:
             results = self.__search_jira_issues(jira_query)
@@ -330,8 +335,8 @@ class ActivitiesSource(object):
         return [issuetype.name.lower() for issuetype in self.jira.issue_types()]
 
     @cache_region('short_term', '__extract_from_jira')
-    def __search_jira_issues(self, jira_query = None):
-        return self.jira.search_issues(jira_query, fields = self.jira_fields, maxResults = 100)
+    def __search_jira_issues(self, jira_query=None):
+        return self.jira.search_issues(jira_query, fields=self.jira_fields, maxResults=100)
 
     def __extract_cat_from_ticket(self, ticket):
         category = DEFAULT_RT_CATEGORY
@@ -339,7 +344,7 @@ class ActivitiesSource(object):
             category = ticket['Queue']
         if self.rt_category in ticket and ticket[self.rt_category]:
             category = ticket[self.rt_category]
-        #        owner = None
+        # owner = None
         #        if 'Owner' in ticket:
         #            owner = ticket['Owner']
         #        if owner and owner!=self.rt_user:
@@ -366,7 +371,6 @@ class ActivitiesSource(object):
         md.destroy()
 
 
-
 def get_eds_tasks():
     try:
         sources = ecal.list_task_sources()
@@ -382,7 +386,7 @@ def get_eds_tasks():
             if data:
                 for task in data.get_all_objects():
                     if task.get_status() in [ecal.ICAL_STATUS_NONE, ecal.ICAL_STATUS_INPROCESS]:
-                        tasks.append({'name': task.get_summary(), 'category' : category})
+                        tasks.append({'name': task.get_summary(), 'category': category})
         return tasks
     except Exception, e:
         logger.warn(e)

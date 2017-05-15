@@ -158,8 +158,8 @@ class Dialogs(Singleton):
         self.prefs = OneWindow(get_prefs_class)
 
         def get_export_rt_class():
-            from exportrt import ExportRtController
-            return ExportRtController
+            from exporter import ExporterController
+            return ExporterController
         self.export_rt = OneWindow(get_export_rt_class)
 
 dialogs = Dialogs()

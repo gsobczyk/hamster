@@ -24,9 +24,8 @@ from itertools import groupby
 import math
 
 from dateutil import tz
-from lib import rt, stuff, redmine
+from lib import stuff
 from lib.rt import TICKET_NAME_REGEX
-from external import SOURCE_NONE
 from external import SOURCE_RT
 from external import SOURCE_REDMINE
 from external import SOURCE_JIRA
@@ -62,26 +61,28 @@ class ExportRow(object):
            and other.fact.id == self.fact.id
 
     def get_text(self, fact):
-        text = "%s, %s-%s" % (fact.date, fact.start_time.strftime("%H:%M"), fact.end_time.strftime("%H:%M"))
+        text = ""
         if fact.description:
-            text += ": %s" % (fact.description)
+            text += "%s\n" % (fact.description)
+        text += "%s, %s-%s" % (fact.date, fact.start_time.strftime("%H:%M"), fact.end_time.strftime("%H:%M"))
         if fact.tags:
             text += " ("+", ".join(fact.tags)+")"
         return text
-        
+
     def get_date(self, fact):
         date = fact.date.isoformat()
         return date
 
     def __hash__(self):
-        
+
         return hash(self.id) \
             ^ hash(self.comment) \
             ^ hash(self.time_worked) \
             ^ hash(self.fact.start_time) \
             ^ hash(self.fact.end_time) \
             ^ hash(self.fact.id)
-    
+
+
 class TicketRow(object):
     def __init__(self, ticket):
         self.ticket = ticket
@@ -94,7 +95,8 @@ class TicketRow(object):
 
     def __hash__(self):
         return self.id
-    
+
+
 def id_painter(column, cell, model, it):
     row = model.get_value(it, 0)
     if isinstance(row, ExportRow):
@@ -131,37 +133,37 @@ def time_painter(column, cell, model, it):
         cell.set_property("weight-set", False)
     else:
         cell.set_visible(True)
-        
+
         child_iter = model.iter_children(it)
         time_worked = 0
         while child_iter:
             time_worked += model.get_value(child_iter, 0).time_worked
             child_iter = model.iter_next(child_iter)
-            
+
         cell.set_property("editable", False)
         cell.set_property("adjustment", None)
         cell.set_property("text", "%s min" % time_worked)
         cell.set_property("weight-set", True)
         cell.set_property("weight", 700)
 
-class ExportRtController(gtk.Object):
+
+class ExporterController(gtk.Object):
     __gsignals__ = {
         "on-close": (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ()),
     }
 
-    def __init__(self, parent = None, facts = None):
+    def __init__(self, parent=None, facts=None):
         gtk.Object.__init__(self)
-        
+
         self.source = conf.get("activities_source")
-                
-        self._gui = load_ui_file("export_rt.ui")
-        self.window = self.get_widget('report_rt_window')
+
+        self._gui = load_ui_file("exporter.ui")
+        self.window = self.get_widget('exporter_window')
 
         self.parent, self.facts = parent, facts
 
         self.done_button = self.get_widget("done_button")
-#        self.done_button.set_sensitive(False)
-        
+
 #        Model
         self.tree_store = gtk.TreeStore(gobject.TYPE_PYOBJECT)
         self.rows = list([ExportRow(fact) for fact in facts])
@@ -170,46 +172,37 @@ class ExportRtController(gtk.Object):
         for issue_id, rows in groupby(self.rows, lambda export_row: export_row.id):
             grouped_rows[issue_id] = list(rows)
         for issue_id in grouped_rows.keys():
-            #ściągnąć nazwę ticketa
+            # ściągnąć nazwę ticketa
             if self.source == SOURCE_RT:
                 row_data = runtime.get_external().rt.get_ticket(issue_id)
-#                 row_data['source'] = SOURCE_RT
             elif self.source == SOURCE_REDMINE:
                 issue = runtime.get_external().redmine.getIssue(issue_id)
-                row_data = {}
-                row_data['id'] = issue.id
-                row_data['Subject'] = str(issue_id)+': '+issue.fields.summary
-#                 row_data['source'] = SOURCE_REDMINE
+                row_data = {'id': issue.id, 'Subject': str(issue_id) + ': ' + issue.fields.summary}
             elif self.source == SOURCE_JIRA:
                 issue = runtime.get_external().jira.issue(issue_id)
-                row_data = {}
-                row_data['id'] = issue.key
-                row_data['Subject'] = issue.fields.summary
-#                 row_data['source'] = SOURCE_JIRA
+                row_data = {'id': issue.key, 'Subject': issue.fields.summary}
 
             if row_data:
-                parent = self.tree_store.append( None, (TicketRow(row_data), ) )
+                parent = self.tree_store.append(None, (TicketRow(row_data),))
                 for row in grouped_rows[issue_id]:
                     self.tree_store.append(parent, (row, ))
-            
-#        self.tree_store.append(parent, (row.comment))
-        self.view = gtk.TreeView(self.tree_store);
+
+        self.view = gtk.TreeView(self.tree_store)
         self.view.set_headers_visible(False)
-        
-        
+
         id_cell = gtk.CellRendererText()
         id_column = gtk.TreeViewColumn("", id_cell, text=0)
         id_column.set_cell_data_func(id_cell, id_painter)
         id_column.set_max_width(100)
         self.view.append_column(id_column)
-        
+
         name_comment_cell = gtk.CellRendererText()
         name_comment_cell.connect("edited", self.on_comment_edited)
         name_comment_column = gtk.TreeViewColumn("", name_comment_cell, text=0)
         name_comment_column.set_cell_data_func(name_comment_cell, name_comment_painter)
         name_comment_column.set_expand(True)
         self.view.append_column(name_comment_column)
-        
+
         time_cell = gtk.CellRendererSpin()
         time_cell.connect("edited", self.on_time_worked_edited)
         time_column = gtk.TreeViewColumn("", time_cell, text=0)
@@ -217,7 +210,7 @@ class ExportRtController(gtk.Object):
         time_column.set_min_width(60)
         self.view.append_column(time_column)
         self.view.expand_all()
-        
+
         self.start_button = self.get_widget("start_button")
         self.get_widget("activities").add(self.view)
         self.aggregate_comments_checkbox = self.get_widget("aggregate_comments_checkbox")
@@ -226,16 +219,15 @@ class ExportRtController(gtk.Object):
         self.progressbar = self.get_widget("progressbar")
         self.progressbar.set_text(_("Waiting for action"))
         self.progressbar.set_orientation(gtk.PROGRESS_LEFT_TO_RIGHT)
-        
+
         self._gui.connect_signals(self)
 
         self.window.show_all()
-    
-    
+
     def on_time_worked_edited(self, widget, path, value):
         row = self.tree_store[path][0]
         row.time_worked = int(value)
-        
+
     def on_comment_edited(self, widget, path, value):
         row = self.tree_store[path][0]
         row.comment = value
@@ -246,7 +238,7 @@ class ExportRtController(gtk.Object):
 
     def show(self):
         self.window.show()
-        
+
     def on_start_activate(self, button):
         if runtime.get_external().rt or runtime.get_external().redmine or runtime.get_external().jira:
             group_comments = self.aggregate_comments_checkbox.get_active()
@@ -255,32 +247,32 @@ class ExportRtController(gtk.Object):
             while it:
                 ticket_row = self.tree_store.get_value(it, 0)
                 child_iter = self.tree_store.iter_children(it)
-                #get children
+                # get children
                 export_rows = []
                 while child_iter:
                     export_rows.append(self.tree_store.get_value(child_iter, 0))
                     child_iter = self.tree_store.iter_next(child_iter)
-                #report tickets
+                # report tickets
                 if group_comments:
-                    comment = "\n".join("%s - %s min"% (row.comment, row.time_worked) for row in export_rows)
+                    comment = "\n".join("%s - %s min" % (row.comment, row.time_worked) for row in export_rows)
                     time_worked = sum([row.time_worked for row in export_rows])
                     facts = [row.fact for row in export_rows]
                     to_report_list.append({
-                        'id':ticket_row.id,
-                        'name':ticket_row.name,
-                        'comment':comment,
-                        'time':time_worked,
-                        'facts':facts,
+                        'id': ticket_row.id,
+                        'name': ticket_row.name,
+                        'comment': comment,
+                        'time': time_worked,
+                        'facts': facts,
                         'date': row.date
                     })
                 else:
                     for row in export_rows:
                         to_report_list.append({
-                            'id':ticket_row.id,
-                            'name':ticket_row.name,
-                            'comment':"%s - %s min"% (row.comment, row.time_worked),
-                            'time':row.time_worked,
-                            'facts':[row.fact],
+                            'id': ticket_row.id,
+                            'name': ticket_row.name,
+                            'comment': "%s - %s min" % (row.comment, row.time_worked),
+                            'time': row.time_worked,
+                            'facts': [row.fact],
                             'date': row.date
                         })
                 it = self.tree_store.iter_next(it)
@@ -290,34 +282,28 @@ class ExportRtController(gtk.Object):
                 to_report = to_report_list[i]
                 self.progressbar.set_text(_("Reporting: #%s: %s - %smin") % (to_report['id'], to_report['name'], to_report['time']))
                 self.progressbar.set_fraction(float(i)/to_report_len)
-                while gtk.events_pending(): 
+                while gtk.events_pending():
                     gtk.main_iteration()
                 if self.source == SOURCE_RT:
                     self.__add_rt_worklog(to_report['id'], to_report['comment'], to_report['time'], to_report['facts'])
                 elif self.source == SOURCE_REDMINE:
-                    self.__add_redmine_worklog(to_report['id'], to_report['date'], math.ceil(to_report['time']*100/60)/100, to_report['comment'], to_report['facts'])
+                    self.__add_redmine_worklog(
+                        to_report['id'],
+                        to_report['date'],
+                        math.ceil(to_report['time']*100/60)/100,
+                        to_report['comment'],
+                        to_report['facts']
+                    )
                 elif self.source == SOURCE_JIRA:
                     self.__add_jira_worklog(to_report['id'], to_report['comment'], to_report['time'], to_report['facts'])
             self.progressbar.set_text("Done")
             self.progressbar.set_fraction(1.0)
-#            for fact in self.facts:
-#                match = re.match(TICKET_NAME_REGEX, fact.activity)
-#                if fact.end_time and match:
-#                    ticket_id = match.group(1)
-#                    text = self.get_text(fact)
-#                    time_worked = stuff.duration_minutes(fact.delta)
-#                    logging.warn(ticket_id)
-#                    logging.warn(text)
-#                    logging.warn("minutes: %s" % time_worked)
-##                    external.rt.comment(ticket_id, text, time_worked)
-#                else:
-#                    logging.warn("Not a RT ticket or in progress: %s" % fact.activity)
         else:
             logging.warn(_("Not connected to/logged in RT"))
         self.start_button.set_sensitive(False)
-        #TODO only if parent is overview
+        # TODO only if parent is overview
         self.parent.search()
-            
+
     def __add_rt_worklog(self, ticket_id, text, time_worked, facts):
         test = self.test_checkox.get_active()
 #        logging.warn(_("updating ticket #%s: %s min, comment: \n%s") % (ticket_id, time_worked, text))
@@ -328,9 +314,8 @@ class ExportRtController(gtk.Object):
 
         if runtime.get_external().rt.comment(ticket_id, text, time) and not test:
             for fact in facts:
-                runtime.storage.update_fact(fact.id, fact, False,True)
-#                fact_row.selected = False
-            
+                runtime.storage.update_fact(fact.id, fact, False, True)
+
     def __add_jira_worklog(self, issue_id, text, time_worked, facts):
         started = min(fact.start_time for fact in facts).replace(tzinfo=tz.tzlocal())
         test = self.test_checkox.get_active()
@@ -342,8 +327,8 @@ class ExportRtController(gtk.Object):
 
         if runtime.get_external().jira.add_worklog(issue = issue_id, comment = text, timeSpent = "%sm" % time, started=started) and not test:
             for fact in facts:
-                runtime.storage.update_fact(fact.id, fact, False,True)
-            
+                runtime.storage.update_fact(fact.id, fact, False, True)
+
     def __add_redmine_worklog(self, issue_id, spent_on, hours, comments, facts):
         test = self.test_checkox.get_active()
         logging.warn(_("updating issue #%s: %s hrs, comment: \n%s") % (issue_id, hours, comments))
@@ -353,21 +338,21 @@ class ExportRtController(gtk.Object):
         time_entry_data['time_entry']['hours'] = hours
         time_entry_data['time_entry']['comments'] = comments
         time_entry_data['time_entry']['activity_id'] = 9
-        
+
         r = runtime.get_external().redmine.createTimeEntry(time_entry_data)
         logging.warn(r.status_code)
         logging.warn(r.content)
         if r.status_code == 201 and not test:
             for fact in facts:
-                runtime.storage.update_fact(fact.id, fact, False,True)
-#                fact_row.selected = False
+                runtime.storage.update_fact(fact.id, fact, False, True)
 
     def get_text(self, fact):
-        text = "%s, %s-%s" % (fact.date, fact.start_time.strftime("%H:%M"), fact.end_time.strftime("%H:%M"))
+        text = ""
         if fact.description:
-            text += ": %s" % (fact.description)
+            text += "%s\n" % fact.description
+        text += "%s, %s-%s" % (fact.date, fact.start_time.strftime("%H:%M"), fact.end_time.strftime("%H:%M"))
         if fact.tags:
-            text += " ("+", ".join(fact.tags)+")"
+            text += " (" + ", ".join(fact.tags) + ")"
         return text
 
     def on_window_key_pressed(self, tree, event_key):
@@ -377,8 +362,8 @@ class ExportRtController(gtk.Object):
                  self.new_name.popup.get_property("visible") or \
                  self.new_tags.popup.get_property("visible")
 
-        if (event_key.keyval == gtk.keysyms.Escape or \
-           (event_key.keyval == gtk.keysyms.w and event_key.state & gtk.gdk.CONTROL_MASK)):
+        if (event_key.keyval == gtk.keysyms.Escape or
+                (event_key.keyval == gtk.keysyms.w and event_key.state & gtk.gdk.CONTROL_MASK)):
             if popups:
                 return False
 
@@ -393,8 +378,6 @@ class ExportRtController(gtk.Object):
         self.on_close(button, None)
 
     def on_close(self, widget, event):
-#         if self.source == SOURCE_RT:
-#             self.rt.logout();
         self.close_window()
 
     def close_window(self):
@@ -411,4 +394,3 @@ class ExportRtController(gtk.Object):
         for fact in self.facts:
             self.view.add_fact(fact)
         self.view.attach_model()
-        
