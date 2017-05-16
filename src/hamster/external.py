@@ -19,6 +19,7 @@
 # along with Project Hamster.  If not, see <http://www.gnu.org/licenses/>.
 
 import gtk
+import os
 import logging
 # from configuration import conf
 import re
@@ -36,6 +37,15 @@ except ImportError:
     JIRA = None
     jira_active = False
 
+try:
+    import configparser
+except ImportError:
+    from six.moves import configparser
+
+try:
+    import configparser
+except ImportError:
+    from six.moves import configparser
 try:
     import evolution
     from evolution import ecal
@@ -121,14 +131,56 @@ class ActivitiesSource(object):
         self.jira_query = conf.get("jira_query")
         self.jira_category = conf.get("jira_category_field")
         self.jira_fields = ','.join(['summary', self.jira_category, 'issuetype'])
+        # self.jira_consumer_key = conf.get("jira_consumer_key")
+        # self.jira_access_token = conf.get("jira_access_token")
+        # self.jira_access_token_secret = conf.get("jira_access_token_secret")
+        # self.jira_key_cert = conf.get("jira_key_cert")
         logger.info("user: %s, pass: *****" % self.jira_user)
-        if self.jira_url and self.jira_user and self.jira_pass:
+        key_cert_data = None
+        # if self.jira_key_cert:
+        #     if os.path.exists(self.jira_key_cert):
+        #         with open(self.jira_key_cert, 'r') as key_cert_file:
+        #             key_cert_data = key_cert_file.read()
+        #     else:
+        #         key_cert_data = self.jira_key_cert
+
+        oauth = self.__parse_jira_oauth_config()
+        if (self.jira_url and ((self.jira_user and self.jira_pass) or (oauth['access_token'] and oauth[
+            'access_token_secret'] and oauth['consumer_key'] and oauth['key_cert']))):
+        # or (self.jira_access_token and self.jira_access_token_secret and self.jira_consumer_key and self.jira_key_cert):
+            # options = {'server': self.jira_url}
+
             options = {'server': self.jira_url}
-            self.jira = JIRA(options, basic_auth = (self.jira_user, self.jira_pass), validate = True)
+            basic_auth = None
+            if oauth['access_token'] and oauth['access_token_secret'] and oauth['key_cert'] and oauth['consumer_key']:
+                basic_auth = {}
+            else:
+                basic_auth = {self.jira_user, self.jira_pass}
+            self.jira = JIRA(options, basic_auth = basic_auth, oauth = oauth, validate = True)
             self.jira_projects = self.__get_jira_projects()
             self.jira_issue_types = self.__get_jira_issue_types()
         else:
             self.source = SOURCE_NONE
+
+    def __parse_jira_oauth_config(self):
+        CONFIG_PATH = os.path.join(
+            os.path.expanduser('~'), '.jira-python', 'jirashell.ini')
+        if not os.path.exists(CONFIG_PATH):
+            oauth = {}
+        parser = configparser.ConfigParser()
+        try:
+            parser.read(CONFIG_PATH)
+        except configparser.ParsingError as err:
+            print("Couldn't read config file at path: {}\n{}".format(
+                CONFIG_PATH, err))
+            raise
+        if parser.has_section('oauth'):
+            oauth = {}
+            for option, value in parser.items('oauth'):
+                oauth[option] = value
+        else:
+            oauth = {}
+        return oauth
 
     def __connect_to_rt(self, conf):
         self.rt_url = conf.get("rt_url")
