@@ -30,3 +30,4 @@ src/hamster/tray.py
 src/hamster/widgets/facttree.py
 src/hamster/widgets/reportchooserdialog.py
 src/hamster/widgets/timechart.py
+src/hamster/widgets/timeinput.py

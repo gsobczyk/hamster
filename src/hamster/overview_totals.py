@@ -168,7 +168,8 @@ class TotalsBox(gtk.VBox):
                 tag_sums[_(WITHOUT_TAG)] += fact.delta
                 
         total_minutes = stuff.duration_minutes([fact.delta for fact in facts])
-        total_label = _("%s hours (%s minutes) tracked total") % (locale.format("%.2f", total_minutes/60.0), locale.format("%d", total_minutes))
+        total_hours = _("%sh %sm / %.2fh") % (total_minutes/60, total_minutes%60, total_minutes/60.0)
+        total_label = _("%s (%s minutes) tracked total") % (total_hours, locale.format("%d", total_minutes))
         self.get_widget("total_hours").set_text(total_label)
 
 

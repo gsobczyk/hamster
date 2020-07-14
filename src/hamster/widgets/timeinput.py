@@ -184,12 +184,19 @@ class TimeInput(gtk.Entry):
         i, focus_row = 0, None
         while i_time < end_time:
             row_text = self._format_time(i_time)
+            step_minutes = 30
             if self.start_time:
                 delta = (i_time - start_time).seconds / 60
                 delta_text = format_duration(delta)
-
+                if delta >= 240:
+                    step_minutes = 120
+                elif delta >= 120:
+                    step_minutes = 60
+                else:
+                    step_minutes = 15
                 row_text += " (%s)" % delta_text
-
+                if delta == 8*60:
+                    row_text += _(" / day")
             hours.append([row_text])
 
 
@@ -197,10 +204,7 @@ class TimeInput(gtk.Entry):
                                                      dt.timedelta(minutes = 30):
                 focus_row = i
 
-            if self.start_time:
-                i_time += dt.timedelta(minutes = 15)
-            else:
-                i_time += dt.timedelta(minutes = 30)
+            i_time += dt.timedelta(minutes = step_minutes)
 
             i += 1
 

@@ -65,6 +65,14 @@ If you want start activity whitch should be tracked for 17 minutes, just write:
 
 bc. -17 lm dzp zarzą
 
+h2. When suggestion doesn't work
+
+try to run command:
+
+pre. dbus-send --session --type=method_call --print-reply --dest=org.gnome.Hamster /org/gnome/Hamster org.gnome.Hamster.GetExtActivities string:"PIT"
+
+It should return some issues instead of empty array (search query: "PIT").
+
 h1. Jira features
 
 It's very similar to RT integration - allows searching issues and raporting time spent on

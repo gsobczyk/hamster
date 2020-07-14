@@ -13,7 +13,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: hamster-time-tracker\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-04-23 22:14+0200\n"
+"POT-Creation-Date: 2020-01-16 16:23+0100\n"
 "PO-Revision-Date: 2012-09-04 01:58+0200\n"
 "Last-Translator: Piotr Drąg <piotrdrag@gmail.com>\n"
 "Language-Team: Polish <gnomepl@aviary.pl>\n"
@@ -368,22 +368,18 @@ msgid "JIRA url:"
 msgstr "JIRA url:"
 
 #: ../data/preferences.ui.h:15
-#, fuzzy
 msgid "JIRA user:"
 msgstr "Użytkownik JIRA:"
 
 #: ../data/preferences.ui.h:16
-#, fuzzy
 msgid "JIRA password:"
 msgstr "Hasło JIRA:"
 
 #: ../data/preferences.ui.h:17
-#, fuzzy
 msgid "JIRA query:"
 msgstr "Zapytanie JIRA:"
 
 #: ../data/preferences.ui.h:18
-#, fuzzy
 msgid "JIRA category field:"
 msgstr "Pole kategorii JIRA:"
 
@@ -392,17 +388,14 @@ msgid "Remine url:"
 msgstr "REdmine url:"
 
 #: ../data/preferences.ui.h:20
-#, fuzzy
 msgid "Redmine user:"
 msgstr "Użytkownik Redmine:"
 
 #: ../data/preferences.ui.h:21
-#, fuzzy
 msgid "Redmine password:"
 msgstr "Hasło Redmine:"
 
 #: ../data/preferences.ui.h:22
-#, fuzzy
 msgid "Redmine query:"
 msgstr "Zapytanie Redmine:"
 
@@ -680,20 +673,20 @@ msgstr ""
 msgid "Update activity"
 msgstr "Aktualizowanie czynności"
 
-#: ../src/hamster/exporter.py:219
+#: ../src/hamster/exporter.py:224
 msgid "Waiting for action"
 msgstr "Czekam na działanie"
 
-#: ../src/hamster/exporter.py:282
+#: ../src/hamster/exporter.py:287
 #, python-format
 msgid "Reporting: #%s: %s - %smin"
 msgstr "Raportowanie: #%s: %s - %s min"
 
-#: ../src/hamster/exporter.py:301
+#: ../src/hamster/exporter.py:306
 msgid "Not connected to/logged in RT"
 msgstr "Nie podłączony do / zalogowany RT"
 
-#: ../src/hamster/exporter.py:333
+#: ../src/hamster/exporter.py:338
 #, python-format
 msgid ""
 "updating issue #%s: %s hrs, comment: \n"
@@ -765,9 +758,12 @@ msgid "without tag"
 msgstr "bez etykiety"
 
 #: ../src/hamster/overview_totals.py:171
-#, python-format
-msgid "%s hours (%s minutes) tracked total"
-msgstr "Ogółem prześledzono %s godzin (%s minut)"
+msgid "%sh %sm / %.2fh"
+msgstr "%sh %sm / %.2fh"
+
+#: ../src/hamster/overview_totals.py:172
+msgid "%s (%s minutes) tracked total"
+msgstr "Ogółem prześledzono %s (%s minut)"
 
 #. Translators: 'None' refers here to the Todo list choice in Hamster preferences (Tracking tab)
 #: ../src/hamster/preferences.py:119
@@ -1079,6 +1075,10 @@ msgstr "iCal"
 #: ../src/hamster/widgets/reportchooserdialog.py:97
 msgid "Time track"
 msgstr "Zarządzanie czasem"
+
+#: ../src/hamster/widgets/timeinput.py:199
+msgid " / day"
+msgstr " / dzień"
 
 #~ msgid "-%s minutes"
 #~ msgstr "-%s minut"
