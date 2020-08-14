@@ -1,4 +1,4 @@
-## Changes in 3.1.0
+## Changes in 3.1.0 (unreleased)
 
 * Added new shortcuts:
   - Ctrl-=: clone or fallback to new if none selected.
@@ -7,6 +7,10 @@
 * Gathering activities from external source (right now only Jira and only via dbus)
 * Export activities as worklogs to jira
 * Export activities to external source from command line (`hamster export external` command)
+
+## Changes in 3.0.3 (unreleased)
+
+* Fixed Adding activities in retrospect is very hard (issue 627)
 
 ## Changes in 3.0.2
 
