@@ -340,6 +340,7 @@ class FactTree(graphics.Scene, gtk.Scrollable):
         self.connect("notify::vadjustment", self._on_vadjustment_change)
         self.connect("on-enter-frame", self.on_enter_frame)
         self.connect("on-double-click", self.on_double_click)
+        self.clipboard = gtk.Clipboard.get(gdk.SELECTION_CLIPBOARD)
 
     @property
     def current_fact_index(self):
@@ -370,6 +371,9 @@ class FactTree(graphics.Scene, gtk.Scrollable):
 
     def delete_row(self, fact):
         self.emit("on-delete-called", fact)
+
+    def copy_fact(self, fact):
+        self.clipboard.set_text(fact.serialized(), -1)
 
     def on_double_click(self, scene, event):
         if self.hover_fact and not isinstance(self.hover_fact, TotalFact):
@@ -423,6 +427,10 @@ class FactTree(graphics.Scene, gtk.Scrollable):
         elif event.keyval == gdk.KEY_Delete:
             if self.current_fact:
                 self.delete_row(self.current_fact)
+
+        elif event.state & gdk.ModifierType.CONTROL_MASK and event.keyval == gdk.KEY_c:
+            if self.current_fact:
+                self.copy_fact(self.current_fact)
 
     def set_current_fact(self, fact):
         self.current_fact = fact
