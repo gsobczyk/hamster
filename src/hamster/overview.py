@@ -588,7 +588,7 @@ class Overview(Controller):
             # the ctrl+things
             if event.keyval == gdk.KEY_f:
                 self.header_bar.search_button.set_active(True)
-            elif event.keyval == gdk.KEY_n:
+            elif event.keyval == gdk.KEY_n or event.keyval == gdk.KEY_v:
                 self.start_new_fact(clone_selected=False)
             elif event.keyval == gdk.KEY_r:
                 # Resume/run; clear separation between Ctrl-R and Ctrl-N
