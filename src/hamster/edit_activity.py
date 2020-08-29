@@ -354,7 +354,6 @@ class CustomFactController(Controller):
         fact = self.fact
 
         now = dt.datetime.now()
-        self.get_widget("button-next-day").set_sensitive(self.date < now.date())
 
         if self.date == now.date():
             default_dt = now
