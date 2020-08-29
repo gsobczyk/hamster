@@ -93,6 +93,10 @@ class CustomFactController(Controller):
         title = _("Update activity") if action == "edit" else _("Add activity")
         self.window.set_title(title)
         self.get_widget("delete_button").set_sensitive(action == "edit")
+
+        clipboard = gtk.Clipboard.get(gdk.SELECTION_CLIPBOARD)
+        fact_from_clipboard = clipboard.wait_for_text()
+
         if action == "edit":
             self.fact = runtime.storage.get_fact(fact_id)
         elif action == "clone":
@@ -100,6 +104,13 @@ class CustomFactController(Controller):
             self.fact = base_fact.copy(start_time=dt.datetime.now(),
                                        end_time=None,
                                        exported=False)
+        elif fact_from_clipboard:
+            try:
+                fact = Fact.parse(fact_from_clipboard)
+                self.fact = fact.copy(exported=False, date=dt.datetime.now().date())\
+                    .copy(start_time=fact.start_time or dt.datetime.now())
+            except Exception:
+                self.fact = Fact(start_time=dt.datetime.now())
         else:
             self.fact = Fact(start_time=dt.datetime.now())
 
