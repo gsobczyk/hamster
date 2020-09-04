@@ -236,6 +236,8 @@ class HamsterCli(object):
 
         if assist_command == "start":
             hamster_client._activities(" ".join(args[1:]))
+        elif assist_command == "extstart":
+            hamster_client._activities(" ".join(args[1:]), True)
         elif assist_command == "export":
             formats = "html tsv xml ical hamster external".split()
             chosen = sys.argv[-1]
@@ -280,7 +282,7 @@ class HamsterCli(object):
         writer = reports.simple(facts, start_time.date(), end_time.date(), export_format)
 
 
-    def _activities(self, search=""):
+    def _activities(self, search="", external=False):
         '''Print the names of all the activities.'''
         if "@" in search:
             activity, category = search.split("@")
@@ -288,16 +290,18 @@ class HamsterCli(object):
                 if not category or cat['name'].lower().startswith(category.lower()):
                     print("{}@{}".format(activity, cat['name']))
         else:
-            for activity in self.storage.get_activities(search):
+            activities = self.storage.get_ext_activities(search) if external else self.storage.get_activities(search)
+            for activity in activities:
                 print(activity['name'])
                 if activity['category']:
                     print("{}@{}".format(activity['name'], activity['category']))
 
 
-    def activities(self, *args):
+    def activities(self, *args, external=False):
         '''Print the names of all the activities.'''
         search = args[0] if args else ""
-        for activity in self.storage.get_activities(search):
+        activities = self.storage.get_ext_activities(search) if external else self.storage.get_activities(search)
+        for activity in activities:
             print("{}@{}".format(activity['name'], activity['category']))
 
     def categories(self, *args):
