@@ -71,7 +71,7 @@ class ReportWriter(object):
     #a tiny bit better than repeating the code all the time
     def __init__(self, path = None, datetime_format = "%Y-%m-%d %H:%M:%S"):
         # if path is empty or None, print to stdout
-        self.file = open(path, "w") if path else StringIO()
+        self.file = open(path, "w") if path else sys.stdout
         self.path = path
         self.datetime_format = datetime_format
 
@@ -85,9 +85,9 @@ class ReportWriter(object):
 
             self._finish(facts)
         finally:
-            if not self.path:
-                # print the full report to stdout
-                print(self.file.getvalue())
+            # if not self.path:
+            #     # print the full report to stdout
+            #     print(self.file.getvalue())
             self.file.close()
 
     def _start(self, facts):
@@ -182,9 +182,8 @@ class ExternalWriter(ReportWriter):
             self.file.write(_("Exported: %s - %s") % (fact.activity, fact.delta) + "\n")
             fact.exported = True
             self.storage.update_fact(fact.id, fact, False)
-            pass
         else:
-            self.file.write(_("Activity not exported: %s" % fact.activity) + "\n")
+            self.file.write(_("Activity already exported: %s" % fact.activity) + "\n")
 
     def _finish(self, facts):
         pass
