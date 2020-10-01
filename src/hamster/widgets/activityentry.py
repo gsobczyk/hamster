@@ -18,6 +18,8 @@
 # along with Project Hamster.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
+
+MAX_USER_SUGGESTIONS = 10
 logger = logging.getLogger(__name__)   # noqa: E402
 
 import bisect
@@ -52,6 +54,11 @@ def extract_search(text):
         search += "@%s" % fact.category
     if fact.tags:
         search += " #%s" % (" #".join(fact.tags))
+    return search.lower()
+
+def extract_search_without_tags_and_category(text):
+    fact = Fact.parse(text)
+    search = fact.activity
     return search.lower()
 
 class DataRow(object):
@@ -231,8 +238,10 @@ class CmdLineEntry(gtk.Entry):
         self.todays_facts = None
         self.local_suggestions = None
         self.load_suggestions()
-        self.ext_suggestions = None
-        self.load_ext_suggestions()
+
+        self.ext_suggestions = []
+        self.ext_suggestion_filler_timer = gobject.timeout_add(0, self.__refresh_ext_suggestions, "")
+
         self.ignore_stroke = False
 
         self.set_icon_from_icon_name(gtk.EntryIconPosition.SECONDARY, "go-down-symbolic")
@@ -241,8 +250,6 @@ class CmdLineEntry(gtk.Entry):
         self.connect("key-press-event", self.on_key_press)
         self.connect("focus-out-event", self.on_focus_out)
         self.connect("icon-press", self.on_icon_press)
-
-
 
     def on_changed(self, entry):
         text = self.get_text()
@@ -296,16 +303,25 @@ class CmdLineEntry(gtk.Entry):
             self.update_entry(label)
             self.set_position(-1)
 
-    def load_ext_suggestions(self):
-        facts = self.storage.get_ext_activities()
-        self.ext_suggestions = []
+    def __load_ext_suggestions_with_timer(self, query=""):
+        if self.ext_suggestion_filler_timer:
+            gobject.source_remove(self.ext_suggestion_filler_timer)
+        self.ext_suggestion_filler_timer = gobject.timeout_add(1000, self.__refresh_ext_suggestions, extract_search_without_tags_and_category(query))
+
+    def __refresh_ext_suggestions(self, query=""):
+        suggestions = []
+        facts = self.storage.get_ext_activities(query)
         for fact in facts:
             label = fact.get("name")
             category = fact.get("category")
             if category:
                 label += "@%s" % category
             score = 10**10
-            self.ext_suggestions.append((label, score))
+            suggestions.append((label, score))
+        logger.debug("external suggestion refreshed for query: %s" % query)
+        self.ext_suggestions = suggestions
+        self.update_suggestions(self.get_text())
+        self.ext_suggestion_filler_timer = None
 
     def load_suggestions(self):
         self.todays_facts = self.storage.get_todays_facts()
@@ -396,15 +412,19 @@ class CmdLineEntry(gtk.Entry):
         search = extract_search(text)
 
         matches = []
-        suggestions = self.local_suggestions + self.ext_suggestions
+        suggestions = self.local_suggestions
         for match, score in suggestions:
-            if search in match.lower():
+            search_words = search.split(" ")
+            match_words = match.lower().split(" ")
+            if all(search_word in match_words for search_word in search_words):
                 if match.lower().startswith(search):
                     score += 10**8 # boost beginnings
                 matches.append((match, score))
+        for match, score in self.ext_suggestions:
+            matches.append((match, score))
 
         # need to limit these guys, sorry
-        matches = sorted(matches, key=lambda x: x[1], reverse=True)[:7]
+        matches = sorted(matches, key=lambda x: x[1], reverse=True)[:MAX_USER_SUGGESTIONS]
 
         for match, score in matches:
             label = (fact.start_time or now).strftime("%H:%M")
@@ -464,8 +484,12 @@ class CmdLineEntry(gtk.Entry):
         self.complete_tree.set_rows(res)
 
     def __bold_search(self, match, search):
-        pattern = re.compile("(%s)" % re.escape(search), re.IGNORECASE)
-        return re.sub(pattern, r"<b>\1</b>", escape(match))
+        result = escape(match)
+        for word in search.split(" "):
+            pattern = re.compile("(%s)" % re.escape(word), re.IGNORECASE)
+            result = re.sub(pattern, r"<b>\1</b>", result)
+
+        return result
 
     def show_suggestions(self, text):
         if not self.get_window():
@@ -476,7 +500,7 @@ class CmdLineEntry(gtk.Entry):
         x, y = entry_x + entry_alloc.x, entry_y + entry_alloc.y + entry_alloc.height
 
         self.popup.show_all()
-
+        self.__load_ext_suggestions_with_timer(text)
         self.update_suggestions(text)
 
         tree_w, tree_h = self.complete_tree.get_size_request()

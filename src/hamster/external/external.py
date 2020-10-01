@@ -29,12 +29,13 @@ from hamster.lib.cache import cache
 from gi.repository import Gtk as gtk
 from gi.repository import GLib as glib
 import re
-import urllib3
 
 try:
     from jira.client import JIRA
+    import urllib3
 except ImportError:
     JIRA = None
+    urllib3 = None
 
 SOURCE_NONE = ""
 SOURCE_JIRA = 'jira'
@@ -114,8 +115,6 @@ class ExternalSource(object):
                     fragments) + " AND resolution = Unresolved order by priority desc, updated desc"
                 logging.info(jira_query)
                 default_jira_activities = self.__jira_get_activities('', jira_query)
-                if activities and default_jira_activities:
-                    activities.append({"name": "---------------------", "category": "other open"})
                 activities.extend(default_jira_activities)
             return activities
 
