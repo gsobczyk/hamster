@@ -115,14 +115,11 @@ class CustomFactController(Controller):
         else:
             self.fact = Fact(start_time=dt.datetime.now())
 
-        original_fact = self.fact
         # TODO: should use hday, not date.
         self.date = self.fact.date
 
         self.update_fields()
         self.update_cmdline(select=True)
-
-        self.cmdline.original_fact = original_fact
 
         # This signal should be emitted only after a manual modification,
         # not at init time when cmdline might not always be fully parsable.
@@ -155,6 +152,17 @@ class CustomFactController(Controller):
         self._date = value
         self.cmdline.default_day = value
 
+    def move_to_date(self, new_date):
+        if self.fact.start_time:
+            previous_date = self.fact.start_time.date()
+            delta = new_date - previous_date
+            self.fact.start_time += delta
+            if self.fact.end_time:
+                # preserve fact duration
+                self.fact.end_time += delta
+                self.end_date.date = self.fact.end_time
+        self.date = self.fact.date or dt.hday.today()
+
     def on_prev_day_clicked(self, button):
         self.increment_date(-1)
 
@@ -171,7 +179,7 @@ class CustomFactController(Controller):
 
     def increment_date(self, days):
         delta = dt.timedelta(days=days)
-        self.change_start_date(self.date + delta)
+        self.move_to_date(self.date + delta)
         self.update_fields()
 
     def show(self):
@@ -206,6 +214,7 @@ class CustomFactController(Controller):
                 # no change to description here, keep the main one
                 fact.description = self.fact.description
             self.fact = fact
+            self.date = fact.date
             self.update_fields()
 
     def on_cmdline_focus_in_event(self, widget, event):
@@ -251,20 +260,9 @@ class CustomFactController(Controller):
     def on_start_date_changed(self, widget):
         if not self.master_is_cmdline:
             new_date = self.start_date.date
-            self.change_start_date(new_date)
-
-    def change_start_date(self, new_date):
-        if self.fact.start_time:
-            previous_date = self.fact.start_time.date()
-            delta = new_date - previous_date
-            self.fact.start_time += delta
-            if self.fact.end_time:
-                # preserve fact duration
-                self.fact.end_time += delta
-                self.end_date.date = self.fact.end_time
-        self.date = self.fact.date or dt.hday.today()
-        self.validate_fields()
-        self.update_cmdline()
+            self.move_to_date(new_date)
+            self.validate_fields()
+            self.update_cmdline()
 
     def on_start_date_expander_activated(self, widget):
         # state has not changed yet, toggle also end_date calendar visibility
@@ -320,8 +318,8 @@ class CustomFactController(Controller):
         self.start_time.time = self.fact.start_time
         self.end_time.time = self.fact.end_time
         self.end_time.set_start_time(self.fact.start_time)
-        self.start_date.date = self.fact.date or self.date
-        self.end_date.date = self.fact.date or self.date
+        self.start_date.date = self.fact.start_time
+        self.end_date.date = self.fact.end_time
         self.activity_entry.set_text(self.fact.activity)
         self.category_entry.set_text(self.fact.category)
         self.description_buffer.set_text(self.fact.description)
