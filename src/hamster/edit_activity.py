@@ -151,17 +151,6 @@ class CustomFactController(Controller):
         self._date = value
         self.cmdline.default_day = value
 
-    def move_to_date(self, new_date):
-        if self.fact.start_time:
-            previous_date = self.fact.start_time.date()
-            delta = new_date - previous_date
-            self.fact.start_time += delta
-            if self.fact.end_time:
-                # preserve fact duration
-                self.fact.end_time += delta
-                self.end_date.date = self.fact.end_time
-        self.date = self.fact.date or dt.hday.today()
-
     def on_prev_day_clicked(self, button):
         self.increment_date(-1)
 
@@ -178,7 +167,8 @@ class CustomFactController(Controller):
 
     def increment_date(self, days):
         delta = dt.timedelta(days=days)
-        self.move_to_date(self.date + delta)
+        self.date += delta
+        self.fact.date = self.date
         self.update_fields()
 
     def show(self):
