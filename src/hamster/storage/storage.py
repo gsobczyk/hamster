@@ -122,14 +122,14 @@ class Storage(object):
         return self.__get_fact(fact_id)
 
     def update_fact(self, fact_id, fact, start_time=None, end_time=None, temporary=False):
-        # better fail before opening the transaction
-        self.check_fact(fact)
-        self.start_transaction()
-        self.__remove_fact(fact_id)
         # to be removed once update facts use Fact directly.
         if isinstance(fact, str):
             fact = Fact.parse(fact)
             fact = fact.copy(start_time=start_time, end_time=end_time)
+        # better fail before opening the transaction
+        self.check_fact(fact)
+        self.start_transaction()
+        self.__remove_fact(fact_id)
         result = self.__add_fact(fact, temporary)
         if not result:
             logger.warning("failed to update fact {} ({})".format(fact_id, fact))
@@ -143,6 +143,18 @@ class Storage(object):
         facts = self.__get_todays_facts()
         if facts and not facts[-1].end_time:
             self.__touch_fact(facts[-1], end_time)
+            self.facts_changed()
+
+
+    def stop_or_restart_tracking(self):
+        """Stops or restarts tracking the last activity"""
+        facts = self.__get_todays_facts()
+        if facts:
+            if facts[-1].end_time:
+                self.add_fact(facts[-1].copy(start_time=dt.datetime.now(),
+                                             end_time = None))
+            else:
+                self.__touch_fact(facts[-1], end_time=dt.datetime.now())
             self.facts_changed()
 
 

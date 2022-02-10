@@ -178,7 +178,12 @@ class CustomFactController(Controller):
 
     def increment_date(self, days):
         delta = dt.timedelta(days=days)
-        self.move_to_date(self.date + delta)
+
+        self.date += delta
+        self.fact.date = self.date
+        # or below
+        # self.move_to_date(self.date + delta)
+
         self.update_fields()
 
     def show(self):

@@ -97,7 +97,7 @@ flatpak run org.gnome.Hamster [args...]
 ### Install from sources
 
 #### Dependencies
-Hamster needs python 3.5 or newer (not included in below install
+Hamster needs python 3.6 or newer (not included in below install
 commands). Older versions are not supported.
 
 ##### Debian-based
@@ -149,12 +149,14 @@ If familiar with github, just clone the repo and `cd` into it.
 Otherwise, to get the `master` development branch (intended to be quite stable):
 ```bash
 wget https://github.com/projecthamster/hamster/archive/master.zip
-cd hamster
+unzip master.zip
+cd hamster-master
 ```
 or a specific [release](https://github.com/projecthamster/hamster/releases):
 ```bash
 # replace 2.2.2 by the release version
 wget https://github.com/projecthamster/hamster/archive/v2.2.2.zip
+unzip v2.2.2.zip
 cd hamster-2.2.2
 ```
 
@@ -178,7 +180,7 @@ GNOME SDK beforehand (an error will notify you about it, if needed). Execute:
 
 ```bash
 flatpak-builder --force-clean --user --install \
-    build/flatpak org.gnome.Hamster.json
+    build/flatpak org.gnome.Hamster.yml
 ```
 
 This creates a temporary flatpack build folder in the ``build/flatpak``
@@ -250,7 +252,7 @@ run:
 To run the tests inside the flatpak, use:
 
 ```bash
-flatpak-builder --run build/flatpak org.gnome.Hamster.json \
+flatpak-builder --run build/flatpak org.gnome.Hamster.yml \
     python3 -m unittest
 ```
 
