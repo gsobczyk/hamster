@@ -240,6 +240,7 @@ class CmdLineEntry(gtk.Entry):
 
         self.ignore_stroke = False
 
+        self.set_icon_from_icon_name(gtk.EntryIconPosition.PRIMARY, "emblem-default-symbolic")
         self.set_icon_from_icon_name(gtk.EntryIconPosition.SECONDARY, "go-down-symbolic")
 
         self.checker = self.connect("changed", self.on_changed)
@@ -320,7 +321,7 @@ class CmdLineEntry(gtk.Entry):
         self.ext_suggestions = suggestions
         self.update_suggestions(self.get_text())
         self.update_suggestions_popup()
-        self.set_icon_from_icon_name(gtk.EntryIconPosition.PRIMARY, None)
+        self.set_icon_from_icon_name(gtk.EntryIconPosition.PRIMARY, "emblem-default-symbolic")
         self.ext_suggestion_filler_timer = None
 
     def load_suggestions(self):
