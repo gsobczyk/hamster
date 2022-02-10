@@ -100,9 +100,12 @@ class ExternalSource(object):
         elif self.source == SOURCE_JIRA:
             activities = self.__jira_get_activities(query, self.jira_query)
             direct_issue = None
-            if query and re.match(JIRA_ISSUE_NAME_REGEX, query):
-                if self.__jira_is_issue_from_existing_project(query):
-                    issue = self.jira.issue(query.upper(), fields=self.jira_fields)
+            issue_match = re.match(JIRA_ISSUE_NAME_REGEX, query)
+            if query and issue_match:
+                issue_key = issue_match.group(1)
+                logging.info("Searching issue: %s" % issue_key)
+                if self.__jira_is_issue_from_existing_project(issue_key):
+                    issue = self.jira.issue(issue_key.upper(), fields=self.jira_fields)
                     if issue:
                         direct_issue = self.__jira_extract_activity_from_issue(issue)
                         if direct_issue not in activities:
