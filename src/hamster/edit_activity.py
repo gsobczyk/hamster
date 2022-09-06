@@ -106,7 +106,7 @@ class CustomFactController(Controller):
                                        exported=False)
         elif fact_from_clipboard:
             try:
-                fact = Fact.parse(fact_from_clipboard)
+                fact = Fact.parse(fact_from_clipboard.splitlines()[0][:50])
                 self.fact = fact.copy(exported=False, date=dt.datetime.now().date())\
                     .copy(start_time=fact.start_time or dt.datetime.now())
             except Exception:
@@ -414,7 +414,7 @@ class CustomFactController(Controller):
         elif event_key.keyval in (gdk.KEY_Return, gdk.KEY_KP_Enter):
             if popups:
                 return False
-            if self.description_box.has_focus():
+            if self.description_box.has_focus() and not event_key.state & gdk.ModifierType.CONTROL_MASK:
                 return False
             if self.validate_fields():
                 self.on_save_button_clicked(None)
