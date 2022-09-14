@@ -496,7 +496,7 @@ class Overview(Controller):
 
         self.window.set_position(gtk.WindowPosition.CENTER)
         self.window.set_default_icon_name("org.gnome.Hamster.GUI")
-        self.window.set_default_size(1000, 700)
+        self.window.set_default_size(1400, 800)
 
         self.storage = hamster.client.Storage()
         self.storage.connect("facts-changed", self.on_facts_changed)
