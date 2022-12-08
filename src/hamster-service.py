@@ -144,9 +144,9 @@ class Storage(db.Storage, dbus.service.Object):
 
         Args:
             fact_str (str): string to be parsed.
-            start_time (int): Start datetime ovveride timestamp (ignored if 0).
+            start_time (int): Start datetime override timestamp (ignored if 0).
                               -1 means None.
-            end_time (int): datetime ovveride timestamp (ignored if 0).
+            end_time (int): datetime override timestamp (ignored if 0).
                             -1 means None.
             #temporary (boolean): historical mystery, ignored, but needed to
                                  keep the method signature stable.

@@ -131,7 +131,10 @@ class Hamster(gtk.Application):
         # most actions have no parameters
         # for type "i", use Variant.new_int32() and .get_int32() to pack/unpack
         for name in ("about", "add", "clone", "edit", "overview", "preferences"):
-            data_type = glib.VariantType("i") if name in ("edit", "clone") else None
+            if name in ("add", "edit", "clone"):
+                data_type = glib.VariantType("(is)")
+            else:
+                data_type = None
             action = gio.SimpleAction.new(name, data_type)
             action.connect("activate", self.on_activate_window)
             self.add_action(action)
@@ -175,8 +178,10 @@ class Hamster(gtk.Application):
                 # Or should we just discard the forgotten one ?
                 logger.warning("Fact controller already active. Please close first.")
             else:
-                fact_id = data.get_int32() if data else None
-                self.fact_controller = CustomFactController(name, fact_id=fact_id)
+                fact_id = data.get_child_value(0).get_int32() if data else None
+                date_str = data.get_child_value(1).get_string() if data else None
+                date = dt.date.fromisoformat(data.get_child_value(1).get_string()) if date_str else None
+                self.fact_controller = CustomFactController(name, fact_id=fact_id, date=date)
                 logger.debug("new CustomFactController")
             controller = self.fact_controller
         elif name == "overview":
@@ -209,15 +214,19 @@ class Hamster(gtk.Application):
         controller.present()
         logger.debug("window presented")
 
-    def present_fact_controller(self, action, fact_id=0):
+    def present_fact_controller(self, action, fact_id=0, date=None):
         """Present the fact controller window to add, clone or edit a fact.
 
         Args:
             action (str): "add", "clone" or "edit"
+            date (datetime.date)
         """
         assert action in ("add", "clone", "edit")
-        if action in ("clone", "edit"):
-            action_data = glib.Variant.new_int32(int(fact_id))
+        if action in ("add", "clone", "edit"):
+            action_data = glib.Variant.new_tuple(
+                glib.Variant.new_int32(int(fact_id)),
+                glib.Variant.new_string(date.isoformat() if date else "")
+            )
         else:
             action_data = None
         # always open dialogs through actions,

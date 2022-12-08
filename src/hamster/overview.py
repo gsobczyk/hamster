@@ -707,9 +707,9 @@ class Overview(Controller):
         self.report_chooser.connect("report-chooser-closed", on_report_chooser_closed)
         self.report_chooser.show(start, end)
 
-    def present_fact_controller(self, action, fact_id=0):
+    def present_fact_controller(self, action, fact_id=0, date=None):
         app = self.window.get_property("application")
-        app.present_fact_controller(action, fact_id=fact_id)
+        app.present_fact_controller(action, fact_id=fact_id, date=date)
 
     def start_new_fact(self, clone_selected=True, fallback=True):
         """Start now a new fact.
@@ -718,13 +718,15 @@ class Overview(Controller):
         fallback (bool): if True, fall back to creating from scratch
                          in case of no selected fact.
         """
+        start, end = self.header_bar.range_pick.get_range()
         if not clone_selected:
-            self.present_fact_controller("add")
+            self.present_fact_controller("add", date=start)
         elif self.fact_tree.current_fact:
             self.present_fact_controller("clone",
-                                         fact_id=self.fact_tree.current_fact.id)
+                                         fact_id=self.fact_tree.current_fact.id,
+                                         date=self.fact_tree.current_fact.range.start.date())
         elif fallback:
-            self.present_fact_controller("add")
+            self.present_fact_controller("add", date=start.start.date())
 
     def close_window(self):
         self.window.destroy()

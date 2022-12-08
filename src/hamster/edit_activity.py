@@ -40,9 +40,10 @@ class CustomFactController(Controller):
     Args:
         action (str): "add", "clone", "edit"
         fact_id (int): used for "clone" and "edit"
+        date (date): used for "add", "clone"
     """
 
-    def __init__(self, action, fact_id=None):
+    def __init__(self, action, fact_id=None, date=None):
         Controller.__init__(self)
 
         self._date = None  # for the date property
@@ -97,22 +98,24 @@ class CustomFactController(Controller):
         clipboard = gtk.Clipboard.get(gdk.SELECTION_CLIPBOARD)
         fact_from_clipboard = clipboard.wait_for_text()
 
+        now = dt.datetime.now()
+        start_time = dt.datetime.combine(date or now, now.time(), now.tzinfo)
         if action == "edit":
             self.fact = runtime.storage.get_fact(fact_id)
         elif action == "clone":
             base_fact = runtime.storage.get_fact(fact_id)
-            self.fact = base_fact.copy(start_time=dt.datetime.now(),
+            self.fact = base_fact.copy(start_time=start_time,
                                        end_time=None,
                                        exported=False)
         elif fact_from_clipboard:
             try:
                 fact = Fact.parse(fact_from_clipboard.splitlines()[0][:50])
-                self.fact = fact.copy(exported=False, date=dt.datetime.now().date())\
-                    .copy(start_time=fact.start_time or dt.datetime.now())
+                self.fact = fact.copy(exported=False, date=start_time.date())\
+                    .copy(start_time=fact.start_time or start_time)
             except Exception:
-                self.fact = Fact(start_time=dt.datetime.now())
+                self.fact = Fact(start_time=start_time)
         else:
-            self.fact = Fact(start_time=dt.datetime.now())
+            self.fact = Fact(start_time=start_time)
 
         # TODO: should use hday, not date.
         self.date = self.fact.date
