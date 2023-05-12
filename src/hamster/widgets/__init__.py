@@ -33,7 +33,7 @@ from hamster.widgets.dayline import DayLine
 from hamster.widgets.tags import Tag, TagBox, TagsEntry
 from hamster.widgets.reportchooserdialog import ReportChooserDialog
 from hamster.widgets.facttree import FactTree
-from hamster.widgets.dates import Calendar, RangePick
+from hamster.widgets.dates import RangePick
 
 
 # handy wrappers

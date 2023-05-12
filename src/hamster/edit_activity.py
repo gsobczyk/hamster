@@ -71,13 +71,22 @@ class CustomFactController(Controller):
         self.description_box = self.get_widget('description')
         self.description_buffer = self.description_box.get_buffer()
 
-        self.end_date = widgets.Calendar(widget=self.get_widget("end date"),
-                                         expander=self.get_widget("end date expander"))
+        self.today_button = self.get_widget('today_button')
+        self.proposed_date_button = self.get_widget('proposed_date_button')
+        if date and date != dt.date.today():
+            self.proposed_date_button.set_sensitive(True)
+            self.proposed_date_button.set_label(date.isoformat())
+        else:
+            self.proposed_date_button.set_sensitive(False)
+        self.proposed_date = date
+
+        # self.end_date = widgets.Calendar(widget=self.get_widget("end date"),
+        #                                  expander=self.get_widget("end date expander"))
 
         self.end_time = widgets.TimeInput(parent=self.get_widget("end time box"))
 
-        self.start_date = widgets.Calendar(widget=self.get_widget("start date"),
-                                           expander=self.get_widget("start date expander"))
+        # self.start_date = widgets.Calendar(widget=self.get_widget("start date"),
+        #                                    expander=self.get_widget("start date expander"))
 
         self.start_time = widgets.TimeInput(parent=self.get_widget("start time box"))
 
@@ -128,13 +137,13 @@ class CustomFactController(Controller):
         self.cmdline.connect("changed", self.on_cmdline_changed)
         self.description_buffer.connect("changed", self.on_description_changed)
         self.start_time.connect("changed", self.on_start_time_changed)
-        self.start_date.connect("day-selected", self.on_start_date_changed)
-        self.start_date.expander.connect("activate",
-                                         self.on_start_date_expander_activated)
+        # self.start_date.connect("day-selected", self.on_start_date_changed)
+        # self.start_date.expander.connect("activate",
+        #                                  self.on_start_date_expander_activated)
         self.end_time.connect("changed", self.on_end_time_changed)
-        self.end_date.connect("day-selected", self.on_end_date_changed)
-        self.end_date.expander.connect("activate",
-                                         self.on_end_date_expander_activated)
+        # self.end_date.connect("day-selected", self.on_end_date_changed)
+        # self.end_date.expander.connect("activate",
+        #                                  self.on_end_date_expander_activated)
         self.activity_entry.connect("changed", self.on_activity_changed)
         self.category_entry.connect("changed", self.on_category_changed)
         self.tags_entry.connect("changed", self.on_tags_changed)
@@ -162,7 +171,7 @@ class CustomFactController(Controller):
             if self.fact.end_time:
                 # preserve fact duration
                 self.fact.end_time += delta
-                self.end_date.date = self.fact.end_time
+                # self.end_date.date = self.fact.end_time
         self.date = self.fact.date or dt.hday.today()
 
     def on_prev_day_clicked(self, button):
@@ -236,23 +245,23 @@ class CustomFactController(Controller):
             self.validate_fields()
             self.update_cmdline()
 
-    def on_end_date_changed(self, widget):
-        if not self.master_is_cmdline:
-            if self.fact.end_time:
-                time = self.fact.end_time.time()
-                self.fact.end_time = dt.datetime.combine(self.end_date.date, time)
-                self.validate_fields()
-                self.update_cmdline()
-            elif self.end_date.date:
-                # No end time means on-going, hence date would be meaningless.
-                # And a default end date may be provided when end time is set,
-                # so there should never be a date without time.
-                self.end_date.date = None
+    # def on_end_date_changed(self, widget):
+    #     if not self.master_is_cmdline:
+    #         if self.fact.end_time:
+    #             time = self.fact.end_time.time()
+    #             self.fact.end_time = dt.datetime.combine(self.end_date.date, time)
+    #             self.validate_fields()
+    #             self.update_cmdline()
+    #         elif self.end_date.date:
+    #             # No end time means on-going, hence date would be meaningless.
+    #             # And a default end date may be provided when end time is set,
+    #             # so there should never be a date without time.
+    #             self.end_date.date = None
 
-    def on_end_date_expander_activated(self, widget):
-        # state has not changed yet, toggle also start_date calendar visibility
-        previous_state = self.end_date.expander.get_expanded()
-        self.start_date.expander.set_expanded(not previous_state)
+    # def on_end_date_expander_activated(self, widget):
+    #     # state has not changed yet, toggle also start_date calendar visibility
+    #     previous_state = self.end_date.expander.get_expanded()
+    #     self.start_date.expander.set_expanded(not previous_state)
 
     def on_end_time_changed(self, widget):
         if not self.master_is_cmdline:
@@ -264,17 +273,28 @@ class CustomFactController(Controller):
             self.validate_fields()
             self.update_cmdline()
 
-    def on_start_date_changed(self, widget):
-        if not self.master_is_cmdline:
-            new_date = self.start_date.date
-            self.move_to_date(new_date)
-            self.validate_fields()
-            self.update_cmdline()
+    def on_today_clicked(self, widget):
+        new_date = dt.date.today()
+        self.move_to_date(new_date)
+        self.validate_fields()
+        self.update_cmdline()
 
-    def on_start_date_expander_activated(self, widget):
-        # state has not changed yet, toggle also end_date calendar visibility
-        previous_state = self.start_date.expander.get_expanded()
-        self.end_date.expander.set_expanded(not previous_state)
+    def on_proposed_clicked(self, widget):
+        self.move_to_date(self.proposed_date)
+        self.validate_fields()
+        self.update_cmdline()
+
+    # def on_start_date_changed(self, widget):
+    #     if not self.master_is_cmdline:
+    #         new_date = self.start_date.date
+    #         self.move_to_date(new_date)
+    #         self.validate_fields()
+    #         self.update_cmdline()
+
+    # def on_start_date_expander_activated(self, widget):
+    #     # state has not changed yet, toggle also end_date calendar visibility
+    #     previous_state = self.start_date.expander.get_expanded()
+    #     self.end_date.expander.set_expanded(not previous_state)
 
     def on_start_time_changed(self, widget):
         if not self.master_is_cmdline:
@@ -292,7 +312,7 @@ class CustomFactController(Controller):
                 new_start_time = None
             self.fact.start_time = new_start_time
             # let start_date extract date or handle None
-            self.start_date.date = new_start_time
+            # self.start_date.date = new_start_time
             self.validate_fields()
             self.update_cmdline()
 
@@ -325,8 +345,8 @@ class CustomFactController(Controller):
         self.start_time.time = self.fact.start_time
         self.end_time.time = self.fact.end_time
         self.end_time.set_start_time(self.fact.start_time)
-        self.start_date.date = self.fact.start_time
-        self.end_date.date = self.fact.end_time
+        # self.start_date.date = self.fact.start_time
+        # self.end_date.date = self.fact.end_time
         self.activity_entry.set_text(self.fact.activity)
         self.category_entry.set_text(self.fact.category)
         self.description_buffer.set_text(self.fact.description)
