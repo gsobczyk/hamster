@@ -64,6 +64,7 @@ Installation:
 (or graphical package installer).
 
 ##### Snap
+
 Easy installation on any distribution supporting snap:  
 https://snapcraft.io/hamster-snap
 
@@ -77,18 +78,16 @@ yourself. Debugging is made easier as every user has the exact same environment
 at runtime. Permissions are limited to what the application really needs to
 function properly.
 
-If you downloaded the file with the Hamster bundle (ending in ``.flatpak``), you
-can directly install it with:
+You can install the Hamster Flatpak from [Flathub](https://flathub.org/apps/details/org.gnome.Hamster) via:
 
 ```bash
-flatpak install --reinstall Hamster.flatpak
+flatpak install flathub org.gnome.Hamster
 ```
 
-If you would like to install Hamster only for your user, please pass the
-``--user`` option to the above command.
+If you would like to install Hamster only for your user, simply pass the
+`--user` option to the above command.
 
-After installation, if you need to invoke Hamster from the command line,
-you can do so with:
+To invoke Hamster from the command line, use:
 
 ```bash
 flatpak run org.gnome.Hamster [args...]
@@ -105,7 +104,7 @@ commands). Older versions are not supported.
 ###### Ubuntu (tested in 19.04 and 18.04)
 
 ```bash
-sudo apt install gettext intltool python3-gi python3-cairo python3-distutils python3-dbus python3-xdg libglib2.0-dev libglib2.0-bin gir1.2-gtk-3.0 gtk-update-icon-cache
+sudo apt install gettext intltool python3-gi python3-cairo python3-gi-cairo python3-distutils python3-dbus python3-xdg libglib2.0-dev libglib2.0-bin gir1.2-gtk-3.0 gtk-update-icon-cache
 # and for exporting issues
 sudo apt install python-tz
 # and for documentation

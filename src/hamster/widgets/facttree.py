@@ -76,7 +76,7 @@ class Label(object):
         self._label_context = cairo.Context(cairo.ImageSurface(cairo.FORMAT_A1, 0, 0))
         self.layout = pangocairo.create_layout(self._label_context)
         self.layout.set_font_description(pango.FontDescription(graphics._font_desc))
-        self.set_text("Hamster")  # dummy
+        self.set_text("00:00 - 00:00")  # dummy time_label for finding width
 
     @property
     def height(self):
@@ -128,8 +128,10 @@ class TagLabel(Label):
 class FactRow(object):
     def __init__(self):
         self.to_export = Label()
-        self.time_label = Label(x=30)
-        self.activity_label = Label(x=130)
+        x = self.to_export.layout.get_pixel_size()[0] + 10
+        self.time_label = Label(x=x)
+        x = x + self.time_label.layout.get_pixel_size()[0] + 10
+        self.activity_label = Label(x=x)
 
         self.category_label = Label()
         self.description_label = Label()
