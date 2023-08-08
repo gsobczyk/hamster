@@ -405,6 +405,10 @@ class datetime(pdt.datetime):
                             self.second, self.microsecond,
                             self.tzinfo, **kwargs)
 
+    def timestamp(self) -> int:
+        """Return the POSIX timestamp."""
+        return int(self.to_pdt().timestamp())
+
 
 # outside class; need the class to be defined first
 datetime.re = re.compile(datetime.pattern(), flags=re.VERBOSE)

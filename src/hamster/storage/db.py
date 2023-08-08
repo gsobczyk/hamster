@@ -790,6 +790,14 @@ class Storage(storage.Storage):
         fact = self.get_fact(fact_id)
         return self.get_external().export(fact)
 
+    def __export_facts(self, range):
+        facts = self.get_facts(range)
+        # filter not exported facts
+        facts_to_export = [fact for fact in facts if not fact.exported]
+        for fact in facts_to_export:
+            self.get_external().export(fact)
+        return facts_to_export
+
     def __get_activities(self, search):
         """returns list of activities for autocomplete,
            activity names converted to lowercase"""

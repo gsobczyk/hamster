@@ -228,6 +228,10 @@ class Storage(object):
     def export_fact(self, fact_id):
         return self.__export_fact(fact_id)
 
+    def export_facts(self, start, end=None):
+        range = dt.Range.from_start_end(start, end)
+        return self.__export_facts(range)
+
     def change_category(self, id, category_id):
         changed = self.__change_category(id, category_id)
         if changed:

@@ -3,7 +3,7 @@
 
 import dbus
 import dbus.service
-
+import time
 from gi.repository import GLib as glib
 from gi.repository import Gio as gio
 
@@ -435,6 +435,41 @@ class Storage(db.Storage, dbus.service.Object):
     def ExportFact(self, fact_id):
         return self.export_fact(fact_id)
 
+    @dbus.service.method("org.gnome.Hamster", in_signature='ss', out_signature='as'.format(fact_signature))
+    def ExportFactsByRange(self, start_date, end_date):
+        # (start_time, end_time), __ = dt.Range.parse(range)
+
+        # start_time = start_time or dt.datetime.combine(dt.date.today(), dt.time())
+        # end_time = end_time or start_time.replace(hour=23, minute=59, second=59)
+
+        start = dt.date.parse(start_date)
+        end = dt.date.parse(end_date)
+
+        return self.__exportFacts(start, end)
+
+    @dbus.service.method("org.gnome.Hamster", in_signature='uu', out_signature='as'.format(fact_signature))
+    def ExportFacts(self, start_date, end_date):
+        """Exports facts between the day of start_date and the day of end_date.
+        Parameters:
+        u start_date: Seconds since epoch (timestamp). Use 0 for today
+        u end_date: Seconds since epoch (timestamp). Use 0 for today
+        Returns an array of D-Bus fact structures.
+        """
+        start = dt.date.today()
+        if start_date:
+            start = dt.datetime.utcfromtimestamp(start_date).date()
+
+        end = None
+        if end_date:
+            end = dt.datetime.utcfromtimestamp(end_date).date()
+        return self.__exportFacts(start, end)
+
+    def __exportFacts(self, start, end):
+        """
+        :type start: datetime.date
+        :type end: datetime.date
+        """
+        return [to_dbus_fact_json(fact) for fact in self.export_facts(start, end)]
 
     @dbus.service.method("org.gnome.Hamster", in_signature='ii', out_signature = 'b')
     def ChangeCategory(self, id, category_id):
