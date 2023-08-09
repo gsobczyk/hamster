@@ -796,6 +796,8 @@ class Storage(storage.Storage):
         facts_to_export = [fact for fact in facts if not fact.exported]
         for fact in facts_to_export:
             self.get_external().export(fact)
+            fact.exported = True
+            self.update_fact(fact.id, fact)
         return facts_to_export
 
     def __get_activities(self, search):
