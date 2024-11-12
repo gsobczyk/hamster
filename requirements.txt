@@ -1,2 +1,6 @@
+pyxdg
+setuptools
+dbus-python
+PyGObject
 urllib3
 jira

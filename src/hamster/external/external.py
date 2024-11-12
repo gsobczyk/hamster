@@ -36,6 +36,7 @@ try:
 except ImportError:
     JIRA = None
     urllib3 = None
+    logger.warning("urllib3 or jira module not found")
 
 SOURCE_NONE = ""
 SOURCE_JIRA = 'jira'
@@ -67,6 +68,7 @@ class ExternalSource(object):
 
     def __connect(self, conf):
         if self.source == SOURCE_JIRA:
+            print("JIRA: %s" % JIRA)
             if JIRA:
                 self.__http = urllib3.PoolManager()
                 self.__connect_to_jira(conf)
@@ -98,7 +100,8 @@ class ExternalSource(object):
         if not self.source:
             return []
         elif self.source == SOURCE_JIRA:
-            activities = self.__jira_get_activities(query, self.jira_query)
+            # shorten query to 30 characters
+            activities = self.__jira_get_activities(query[:30], self.jira_query)
             direct_issue = None
             issue_match = re.match(JIRA_ISSUE_NAME_REGEX, query)
             if query and issue_match:
@@ -114,8 +117,7 @@ class ExternalSource(object):
                 words = query.split(' ')
                 # filter empty elements
                 fragments = filter(len, [self.__generate_fragment_jira_query(word) for word in words])
-                jira_query = " AND ".join(
-                    fragments) + " AND resolution = Unresolved order by priority desc, updated desc"
+                jira_query = " AND ".join(fragments) + " AND resolution = Unresolved order by priority desc, updated desc"
                 logging.info(jira_query)
                 default_jira_activities = self.__jira_get_activities('', jira_query)
                 activities.extend(default_jira_activities)
