@@ -57,11 +57,15 @@ https://software.opensuse.org/package/hamster-time-tracker
 
 ##### Fedora and EPEL
 
-Package status: https://apps.fedoraproject.org/packages/hamster-time-tracker
+Package status: https://src.fedoraproject.org/rpms/hamster-time-tracker
 
-Installation:
+As of November 2023, hamster has only been packaged up to fc30 (with hamster version 2.0).
+
+Installation (on releases with existing package):
 ```sudo dnf install hamster-time-tracker```
 (or graphical package installer).
+
+For more recent releases, refer to compilation from sources above.
 
 ##### Snap
 
@@ -104,7 +108,7 @@ commands). Older versions are not supported.
 ###### Ubuntu (tested in 19.04 and 18.04)
 
 ```bash
-sudo apt install gettext intltool python3-gi python3-cairo python3-gi-cairo python3-distutils python3-dbus python3-xdg libglib2.0-dev libglib2.0-bin gir1.2-gtk-3.0 gtk-update-icon-cache
+sudo apt install gettext intltool python3-gi python3-cairo python3-gi-cairo python3-distutils python3-dbus libglib2.0-dev libglib2.0-bin gir1.2-gtk-3.0 gtk-update-icon-cache
 # and for exporting issues
 sudo apt install python-tz
 # and for documentation
@@ -117,7 +121,7 @@ sudo apt install python3-jira python3-urllib3
 
 Leap-15.0 and Leap-15.1:
 ```bash
-sudo zypper install intltool python3-pyxdg python3-cairo python3-gobject-Gdk
+sudo zypper install intltool python3-cairo python3-gobject-Gdk
 # and for exporting issues
 sudo zypper install python-tz
 # and for documentation
@@ -126,11 +130,12 @@ sudo zypper install itstool yelp
 sudo zypper install python3-jira python3-urllib3
 ```
 
-##### RPM-based
+##### Fedora
 
-*RPM-based instructions below should be updated for python3 (issue [#369](https://github.com/projecthamster/hamster/issues/369)).*
-
-`yum install gettext intltool dbus-python`
+```bash
+sudo dnf install gettext intltool python3-pyxdg python3-cairo python3-gobject
+sudo dnf install python3-dbus itstool yelp
+```
 
 ##### Help reader
 If the hamster help pages are not accessible ("unable to open `help:hamster-time-tracker`"),
@@ -179,7 +184,7 @@ GNOME SDK beforehand (an error will notify you about it, if needed). Execute:
 
 ```bash
 flatpak-builder --force-clean --user --install \
-    build/flatpak org.gnome.Hamster.yml
+    build/flatpak data/org.gnome.Hamster.flatpak.yml
 ```
 
 This creates a temporary flatpack build folder in the ``build/flatpak``
@@ -251,7 +256,7 @@ run:
 To run the tests inside the flatpak, use:
 
 ```bash
-flatpak-builder --run build/flatpak org.gnome.Hamster.yml \
+flatpak-builder --run build/flatpak data/org.gnome.Hamster.flatpak.yml \
     python3 -m unittest
 ```
 

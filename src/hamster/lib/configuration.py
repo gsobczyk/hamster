@@ -29,7 +29,6 @@ logger = logging.getLogger(__name__)   # noqa: E402
 
 import os
 from hamster.client import Storage
-from xdg.BaseDirectory import xdg_data_home
 
 from gi.repository import Gdk as gdk
 from gi.repository import Gio as gio
@@ -127,7 +126,7 @@ class RuntimeStore(Singleton):
 
         self.data_dir = os.path.realpath(self.data_dir)
         self.storage = Storage()
-        self.home_data_dir = os.path.realpath(os.path.join(xdg_data_home, "hamster"))
+        self.home_data_dir = os.path.realpath(os.path.join(glib.get_user_data_dir(), "hamster"))
 
     def get_external(self) -> ExternalSource:
         if self.external_need_update:
