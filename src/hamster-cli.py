@@ -22,14 +22,13 @@
 
 '''A script to control the applet from the command line.'''
 
-import sys, os
 import argparse
-import re
+import sys
 
 import gi
+
 gi.require_version('Gdk', '3.0')  # noqa: E402
 gi.require_version('Gtk', '3.0')  # noqa: E402
-from gi.repository import GLib as glib
 from gi.repository import Gdk as gdk
 from gi.repository import Gtk as gtk
 from gi.repository import Gio as gio
@@ -43,7 +42,7 @@ from hamster.about import About
 from hamster.edit_activity import CustomFactController
 from hamster.overview import Overview
 from hamster.preferences import PreferencesEditor
-from hamster.lib import default_logger, stuff
+from hamster.lib import default_logger
 from hamster.lib import datetime as dt
 from hamster.lib.fact import Fact
 

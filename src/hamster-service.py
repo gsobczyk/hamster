@@ -3,13 +3,13 @@
 
 import dbus
 import dbus.service
-import time
 from gi.repository import GLib as glib
 from gi.repository import Gio as gio
 
 import hamster
 from hamster import logger as hamster_logger
 from hamster.lib import i18n
+
 i18n.setup_i18n()  # noqa: E402
 
 from hamster.storage import db
@@ -19,7 +19,6 @@ from hamster.lib.dbus import (
     DBusMainLoop,
     fact_signature,
     from_dbus_date,
-    from_dbus_fact,
     from_dbus_fact_json,
     from_dbus_range,
     to_dbus_fact,

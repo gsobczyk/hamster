@@ -236,7 +236,7 @@ class CmdLineEntry(gtk.Entry):
         self.load_suggestions()
 
         self.ext_suggestions = []
-        self.ext_suggestion_filler_timer = gobject.timeout_add(0, self.__refresh_ext_suggestions, "")
+        self.ext_suggestion_filler_timer = None # gobject.timeout_add(0, self.__refresh_ext_suggestions, "")
 
         self.ignore_stroke = False
 
@@ -407,7 +407,7 @@ class CmdLineEntry(gtk.Entry):
                     looking_for = fields[fields.index(field)+1]
                 break
 
-        fragments = [f for f in re.split("[\s|#]", text)]
+        fragments = [f for f in re.split("[\\s|#]", text)]
         current_fragment = fragments[-1] if fragments else ""
 
         search = extract_search(fact)

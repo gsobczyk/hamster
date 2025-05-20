@@ -68,7 +68,7 @@ class ExternalSource(object):
 
     def __connect(self, conf):
         if self.source == SOURCE_JIRA:
-            print("JIRA: %s" % JIRA)
+            print("external source: JIRA")
             if JIRA:
                 self.__http = urllib3.PoolManager()
                 self.__connect_to_jira(conf)
@@ -88,7 +88,7 @@ class ExternalSource(object):
         logger.info("user: %s, pass: *****" % self.jira_user)
         if self.jira_url and self.jira_user and self.jira_pass and self.__is_connected(self.jira_url):
             options = {'server': self.jira_url}
-            self.jira = JIRA(options, basic_auth=(self.jira_user, self.jira_pass), validate=True)
+            self.jira = JIRA(options, basic_auth=(self.jira_user, self.jira_pass), validate=True, timeout=5.0)
             self.jira_projects = self.__jira_get_projects()
             self.jira_issue_types = self.__jira_get_issue_types()
         else:
@@ -96,13 +96,16 @@ class ExternalSource(object):
             self.__on_error("Invalid Jira credentials")
 
     def get_activities(self, query=None):
-        query = query.strip()
+        # shorten query to 30 characters
+        query = query.strip()[:30]
         if not self.source:
             return []
         elif self.source == SOURCE_JIRA:
-            # shorten query to 30 characters
-            activities = self.__jira_get_activities(query[:30], self.jira_query)
+            current_activities = []
             direct_issue = None
+            filtered_activities = []
+
+            current_activities = self.__jira_get_activities(query, self.jira_query)
             issue_match = re.match(JIRA_ISSUE_NAME_REGEX, query)
             if query and issue_match:
                 issue_key = issue_match.group(1)
@@ -111,22 +114,31 @@ class ExternalSource(object):
                     issue = self.jira.issue(issue_key.upper(), fields=self.jira_fields)
                     if issue:
                         direct_issue = self.__jira_extract_activity_from_issue(issue)
-                        if direct_issue not in activities:
-                            activities.append(direct_issue)
-            if len(activities) <= CURRENT_USER_ACTIVITIES_LIMIT and not direct_issue and len(query) >= MIN_QUERY_LENGTH:
+                        # if direct_issue not in current_activities:
+                        #     activities.append(direct_issue)
+            if not direct_issue and len(query) >= MIN_QUERY_LENGTH or self.__jira_is_issue_from_existing_project(query):
                 words = query.split(' ')
                 # filter empty elements
                 fragments = filter(len, [self.__generate_fragment_jira_query(word) for word in words])
                 jira_query = " AND ".join(fragments) + " AND resolution = Unresolved order by priority desc, updated desc"
                 logging.info(jira_query)
-                default_jira_activities = self.__jira_get_activities('', jira_query)
-                activities.extend(default_jira_activities)
+                filtered_activities = self.__jira_get_activities('', jira_query)
+
+            activities = []
+            activities.extend(filtered_activities)
+            if direct_issue and direct_issue not in activities:
+                activities.append(direct_issue)
+            if len(activities) <= CURRENT_USER_ACTIVITIES_LIMIT:
+                # add to `activities` only not existing ones from `current_activities`
+                for activity in current_activities:
+                    if activity not in activities:
+                        activities.append(activity)
             return activities
 
     def __generate_fragment_jira_query(self, word):
-        if word.upper() in self.jira_projects:
+        if self.__jira_is_issue_from_existing_project(word):
             return "project = " + word.upper()
-        elif word.lower() in self.jira_issue_types:
+        elif self.__jira_is_issue_type(word):
             return "issuetype = " + word.lower()
         elif word:
             return "(assignee = '%s' OR summary ~ '%s*')" % (word, word)
@@ -194,7 +206,10 @@ class ExternalSource(object):
             return False
 
     def __jira_is_issue_from_existing_project(self, issue):
-        return issue.split('-', 1)[0].upper() in self.jira_projects
+        return issue.split('-', 1)[0].strip().upper() in self.jira_projects
+
+    def __jira_is_issue_type(self, word):
+        return word.lower() in self.jira_issue_types
 
     def export(self, fact: Fact) -> bool:
         """
