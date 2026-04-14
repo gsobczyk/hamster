@@ -77,10 +77,7 @@ class Controller(gobject.GObject):
 
     def present(self):
         """Show window and bring it to the foreground."""
-        # workaround https://gitlab.gnome.org/GNOME/gtk/issues/624
-        # fixed in gtk-3.24.1 (2018-09-19)
-        # self.overview_controller.window.present()
-        self.window.present_with_time(glib.get_monotonic_time() / 1000)
+        self.window.present()
 
     def show(self):
         """Show window.
