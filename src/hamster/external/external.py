@@ -84,7 +84,7 @@ class ExternalSource(object):
         self.jira_pass = conf.get("jira-pass")
         self.jira_query = conf.get("jira-query")
         self.jira_category = conf.get("jira-category-field")
-        self.jira_fields = ','.join(['summary', self.jira_category, 'issuetype', 'assignee', 'project', 'status'])
+        self.jira_fields = self.__build_jira_fields(self.jira_category)
         logger.info("user: %s, pass: *****" % self.jira_user)
         if self.jira_url and self.jira_user and self.jira_pass and self.__is_connected(self.jira_url):
             options = {'server': self.jira_url}
@@ -165,16 +165,87 @@ class ExternalSource(object):
                            + ': ' + fields.summary.replace(",", " ").replace("#", "*").replace("@", " ") \
                            + " (%s)" % fields.status.name \
                            + (" 👨‍💼" + fields.assignee.name if fields.assignee else "")
-        if hasattr(fields, self.jira_category):
-            activity['category'] = str(getattr(fields, self.jira_category))
-        else:
-            activity['category'] = ""
+        activity['category'] = self.__resolve_jira_category(issue, self.jira_category)
         if not activity['category'] or activity['category'] == "None":
             try:
                 activity['category'] = "%s/%s (%s)" % (fields.project.key, fields.issuetype.name, fields.project.name)
             except Exception as e:
                 logger.warning(e)
         return activity
+
+    def __build_jira_fields(self, category_path):
+        fields = ['summary', 'issuetype', 'assignee', 'project', 'status']
+        category_field = self.__extract_jira_top_level_field(category_path)
+        if category_field and category_field not in fields:
+            fields.append(category_field)
+        return ','.join(fields)
+
+    def __extract_jira_top_level_field(self, path):
+        if not path:
+            return None
+        tokens = [token for token in path.split('.') if token]
+        if not tokens:
+            return None
+        if tokens[0] == 'fields' and len(tokens) > 1:
+            return tokens[1]
+        return tokens[0]
+
+    def __resolve_jira_category(self, issue, category_path):
+        if not category_path:
+            return ""
+
+        raw_issue = getattr(issue, 'raw', None)
+        value = self.__get_value_by_path(raw_issue, category_path)
+        if value is None and not category_path.startswith('fields.'):
+            value = self.__get_value_by_path(raw_issue, 'fields.' + category_path)
+
+        if value is None and '.' not in category_path and hasattr(issue.fields, category_path):
+            value = getattr(issue.fields, category_path)
+
+        return self.__stringify_jira_field_value(value)
+
+    def __get_value_by_path(self, root, path):
+        if root is None or not path:
+            return None
+
+        current = root
+        for token in [token for token in path.split('.') if token]:
+            if isinstance(current, dict):
+                if token not in current:
+                    return None
+                current = current[token]
+            elif isinstance(current, list):
+                if not token.isdigit():
+                    return None
+                index = int(token)
+                if index < 0 or index >= len(current):
+                    return None
+                current = current[index]
+            else:
+                if not hasattr(current, token):
+                    return None
+                current = getattr(current, token)
+        return current
+
+    def __stringify_jira_field_value(self, value):
+        if value is None:
+            return ""
+        if isinstance(value, list):
+            rendered = [self.__stringify_jira_field_value(item) for item in value]
+            rendered = [item for item in rendered if item]
+            return ", ".join(rendered)
+        if isinstance(value, dict):
+            for key in ('summary', 'value', 'name', 'key', 'id'):
+                if key in value and value[key] is not None:
+                    return str(value[key])
+            return str(value)
+
+        for attr in ('summary', 'value', 'name', 'key', 'id'):
+            if hasattr(value, attr):
+                attr_value = getattr(value, attr)
+                if attr_value is not None:
+                    return str(attr_value)
+        return str(value)
 
     def __jira_get_projects(self):
         return [project.key for project in self.jira.projects()]

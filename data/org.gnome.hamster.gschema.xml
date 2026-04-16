@@ -31,7 +31,7 @@
             <summary>Jira query</summary>
         </key>
         <key type="s" name="jira-category-field">
-            <default>"customfield_10000"</default>
+            <default>"fields.customfield_22000.fields.summary"</default>
             <summary>Jira category field</summary>
         </key>
 
