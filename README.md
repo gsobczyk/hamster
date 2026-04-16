@@ -117,7 +117,7 @@ commands). Older versions are not supported.
 ```bash
 sudo apt install gettext intltool python3-gi python3-cairo python3-gi-cairo python3-dbus libglib2.0-dev libglib2.0-bin gir1.2-gtk-3.0 gtk-update-icon-cache
 # and for exporting issues
-sudo apt install python-tz
+sudo apt install python3-tz
 # and for documentation
 sudo apt install itstool yelp
 # and for jira integration (should be python3-jira>=2.0.0, if not - use pip)
