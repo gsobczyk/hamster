@@ -18,8 +18,11 @@
 # along with Project Hamster.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
+import threading
+import time
 
 MAX_USER_SUGGESTIONS = 10
+MIN_EXTERNAL_QUERY_LENGTH = 3
 logger = logging.getLogger(__name__)   # noqa: E402
 
 import bisect
@@ -30,6 +33,7 @@ from xml.sax.saxutils import escape
 from gi.repository import Gdk as gdk
 from gi.repository import Gtk as gtk
 from gi.repository import GObject as gobject
+from gi.repository import GLib as glib
 from gi.repository import PangoCairo as pangocairo
 from gi.repository import Pango as pango
 from collections import defaultdict
@@ -237,6 +241,7 @@ class CmdLineEntry(gtk.Entry):
 
         self.ext_suggestions = []
         self.ext_suggestion_filler_timer = None # gobject.timeout_add(0, self.__refresh_ext_suggestions, "")
+        self.ext_suggestion_sequence = 0
 
         self.ignore_stroke = False
 
@@ -301,28 +306,65 @@ class CmdLineEntry(gtk.Entry):
             self.set_position(-1)
 
     def __load_ext_suggestions_with_timer(self, query=""):
-        self.set_icon_from_icon_name(gtk.EntryIconPosition.PRIMARY, "emblem-synchronizing-symbolic")
         if self.ext_suggestion_filler_timer:
             gobject.source_remove(self.ext_suggestion_filler_timer)
-        self.ext_suggestion_filler_timer = gobject.timeout_add(500, self.__refresh_ext_suggestions,
-                                                               extract_search_without_tags_and_category(query))
-
-    def __refresh_ext_suggestions(self, query=""):
-        suggestions = []
-        facts = self.storage.get_ext_activities(query)
-        for fact in facts:
-            label = fact.get("name")
-            category = fact.get("category")
-            if category:
-                label += "@%s" % category
-            score = 10**10
-            suggestions.append((label, score))
-        logger.debug("external suggestion refreshed for query: %s" % query)
-        self.ext_suggestions = suggestions
-        self.update_suggestions(self.get_text())
-        self.update_suggestions_popup()
-        self.set_icon_from_icon_name(gtk.EntryIconPosition.PRIMARY, "emblem-default-symbolic")
         self.ext_suggestion_filler_timer = None
+        search = extract_search_without_tags_and_category(query).strip()
+
+        self.ext_suggestion_sequence += 1
+        sequence = self.ext_suggestion_sequence
+
+        if len(search) < MIN_EXTERNAL_QUERY_LENGTH:
+            self.ext_suggestions = []
+            self.update_suggestions(self.get_text())
+            self.update_suggestions_popup()
+            self.set_icon_from_icon_name(gtk.EntryIconPosition.PRIMARY, "emblem-default-symbolic")
+            return
+
+        self.set_icon_from_icon_name(gtk.EntryIconPosition.PRIMARY, "emblem-synchronizing-symbolic")
+        self.ext_suggestion_filler_timer = gobject.timeout_add(
+            700,
+            self.__refresh_ext_suggestions,
+            search,
+            sequence,
+        )
+
+    def __refresh_ext_suggestions(self, query="", sequence=0):
+        self.ext_suggestion_filler_timer = None
+
+        def fetch_external_suggestions():
+            started = time.monotonic()
+            suggestions = []
+            try:
+                facts = self.storage.get_ext_activities(query)
+                for fact in facts:
+                    label = fact.get("name")
+                    category = fact.get("category")
+                    if category:
+                        label += "@%s" % category
+                    score = 10**10
+                    suggestions.append((label, score))
+                logger.debug("external suggestion refreshed for query: %s", query)
+            except Exception as error:
+                logger.warning("external suggestions failed for query '%s': %s", query, error)
+
+            elapsed = time.monotonic() - started
+            logger.debug("external suggestions fetch took %.3fs", elapsed)
+
+            def apply_suggestions():
+                if sequence != self.ext_suggestion_sequence:
+                    return False
+
+                self.ext_suggestions = suggestions
+                self.update_suggestions(self.get_text())
+                self.update_suggestions_popup()
+                self.set_icon_from_icon_name(gtk.EntryIconPosition.PRIMARY, "emblem-default-symbolic")
+                return False
+
+            glib.idle_add(apply_suggestions)
+
+        threading.Thread(target=fetch_external_suggestions, daemon=True).start()
+        return False
 
     def load_suggestions(self):
         self.todays_facts = self.storage.get_todays_facts()

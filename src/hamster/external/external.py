@@ -44,6 +44,7 @@ JIRA_ISSUE_NAME_REGEX = "^([a-zA-Z][a-zA-Z0-9]*-[0-9]+)"
 ERROR_ADDITIONAL_MESSAGE = '\n\nCheck settings and reopen main window.'
 MIN_QUERY_LENGTH = 3
 CURRENT_USER_ACTIVITIES_LIMIT = 5
+JIRA_FAILURE_COOLDOWN_SECONDS = 15
 
 
 class ExternalSource(object):
@@ -57,6 +58,7 @@ class ExternalSource(object):
         self.jira_issue_types = None
         self.jira_query = None
         self.__http = None
+        self._jira_blocked_until = 0
 
         try:
             self.__connect(conf)
@@ -88,7 +90,11 @@ class ExternalSource(object):
         logger.info("user: %s, pass: *****" % self.jira_user)
         if self.jira_url and self.jira_user and self.jira_pass and self.__is_connected(self.jira_url):
             options = {'server': self.jira_url}
-            self.jira = JIRA(options, basic_auth=(self.jira_user, self.jira_pass), validate=True, timeout=5.0)
+            self.jira = JIRA(options,
+                             basic_auth=(self.jira_user, self.jira_pass),
+                             validate=True,
+                             timeout=5.0,
+                             max_retries=0)
             self.jira_projects = self.__jira_get_projects()
             self.jira_issue_types = self.__jira_get_issue_types()
         else:
@@ -97,10 +103,13 @@ class ExternalSource(object):
 
     def get_activities(self, query=None):
         # shorten query to 30 characters
-        query = query.strip()[:30]
+        query = (query or "").strip()[:30]
         if not self.source:
             return []
         elif self.source == SOURCE_JIRA:
+            if self.__jira_temporarily_unavailable() or not self.jira:
+                return []
+
             current_activities = []
             direct_issue = None
             filtered_activities = []
@@ -111,12 +120,18 @@ class ExternalSource(object):
                 issue_key = issue_match.group(1)
                 logging.info("Searching issue: %s" % issue_key)
                 if self.__jira_is_issue_from_existing_project(issue_key):
-                    issue = self.jira.issue(issue_key.upper(), fields=self.jira_fields)
-                    if issue:
-                        direct_issue = self.__jira_extract_activity_from_issue(issue)
-                        # if direct_issue not in current_activities:
-                        #     activities.append(direct_issue)
-            if not direct_issue and len(query) >= MIN_QUERY_LENGTH or self.__jira_is_issue_from_existing_project(query):
+                    try:
+                        issue = self.jira.issue(issue_key.upper(), fields=self.jira_fields)
+                        if issue:
+                            direct_issue = self.__jira_extract_activity_from_issue(issue)
+                            # if direct_issue not in current_activities:
+                            #     activities.append(direct_issue)
+                    except Exception as error:
+                        self.__mark_jira_temporarily_unavailable(error)
+
+            is_project_query = self.__jira_is_issue_from_existing_project(query)
+            if ((not direct_issue and len(query) >= MIN_QUERY_LENGTH)
+                    or is_project_query):
                 words = query.split(' ')
                 # filter empty elements
                 fragments = filter(len, [self.__generate_fragment_jira_query(word) for word in words])
@@ -134,6 +149,7 @@ class ExternalSource(object):
                     if activity not in activities:
                         activities.append(activity)
             return activities
+        return []
 
     def __generate_fragment_jira_query(self, word):
         if self.__jira_is_issue_from_existing_project(word):
@@ -147,14 +163,17 @@ class ExternalSource(object):
 
     def __jira_get_activities(self, query='', jira_query=None):
         activities = []
+        if self.__jira_temporarily_unavailable():
+            return activities
+
         try:
             results = self.__jira_search_issues(jira_query)
             for issue in results:
                 activity = self.__jira_extract_activity_from_issue(issue)
                 if query is None or all(item in activity['name'].lower() for item in query.lower().split(' ')):
                     activities.append(activity)
-        except Exception as e:
-            logger.warning(e)
+        except Exception as error:
+            self.__mark_jira_temporarily_unavailable(error)
         return activities
 
     def __jira_extract_activity_from_issue(self, issue):
@@ -255,7 +274,18 @@ class ExternalSource(object):
 
     @cache(seconds=30)
     def __jira_search_issues(self, jira_query=None):
+        if self.__jira_temporarily_unavailable() or not self.jira:
+            return []
         return self.jira.search_issues(jira_query, fields=self.jira_fields, maxResults=100)
+
+    def __jira_temporarily_unavailable(self):
+        return self._jira_blocked_until and time.monotonic() < self._jira_blocked_until
+
+    def __mark_jira_temporarily_unavailable(self, error):
+        self._jira_blocked_until = time.monotonic() + JIRA_FAILURE_COOLDOWN_SECONDS
+        logger.warning("jira request failed, disabling jira suggestions for %ss: %s",
+                       JIRA_FAILURE_COOLDOWN_SECONDS,
+                       error)
 
     def __on_error(self, msg):
         glib.idle_add(self.__on_error_dialog, msg)
@@ -277,9 +307,13 @@ class ExternalSource(object):
             return False
 
     def __jira_is_issue_from_existing_project(self, issue):
+        if not issue or not self.jira_projects:
+            return False
         return issue.split('-', 1)[0].strip().upper() in self.jira_projects
 
     def __jira_is_issue_type(self, word):
+        if not self.jira_issue_types:
+            return False
         return word.lower() in self.jira_issue_types
 
     def export(self, fact: Fact) -> bool:
