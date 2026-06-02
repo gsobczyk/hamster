@@ -130,8 +130,8 @@ class ExternalSource(object):
                         self.__mark_jira_temporarily_unavailable(error)
 
             is_project_query = self.__jira_is_issue_from_existing_project(query)
-            if ((not direct_issue and len(query) >= MIN_QUERY_LENGTH)
-                    or is_project_query):
+            if (not direct_issue
+                    and (len(query) >= MIN_QUERY_LENGTH or is_project_query)):
                 words = query.split(' ')
                 # filter empty elements
                 fragments = filter(len, [self.__generate_fragment_jira_query(word) for word in words])
@@ -152,6 +152,9 @@ class ExternalSource(object):
         return []
 
     def __generate_fragment_jira_query(self, word):
+        issue_match = re.match("^[a-zA-Z][a-zA-Z0-9]*-[0-9]+$", word or "")
+        if issue_match:
+            return "key = " + word.upper()
         if self.__jira_is_issue_from_existing_project(word):
             return "project = " + word.upper()
         elif self.__jira_is_issue_type(word):

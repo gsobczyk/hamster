@@ -323,7 +323,7 @@ class CmdLineEntry(gtk.Entry):
 
         self.set_icon_from_icon_name(gtk.EntryIconPosition.PRIMARY, "emblem-synchronizing-symbolic")
         self.ext_suggestion_filler_timer = gobject.timeout_add(
-            700,
+            500,
             self.__refresh_ext_suggestions,
             search,
             sequence,
