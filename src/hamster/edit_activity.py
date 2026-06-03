@@ -47,6 +47,8 @@ class CustomFactController(Controller):
         Controller.__init__(self)
 
         self._date = None  # for the date property
+        # guard callbacks triggered during widget initialization
+        self.master_is_cmdline = False
 
         self._gui = load_ui_file("edit_activity.ui")
         self.window = self.get_widget('custom_fact_window')

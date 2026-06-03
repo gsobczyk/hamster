@@ -44,7 +44,7 @@ JIRA_ISSUE_NAME_REGEX = "^([a-zA-Z][a-zA-Z0-9]*-[0-9]+)"
 ERROR_ADDITIONAL_MESSAGE = '\n\nCheck settings and reopen main window.'
 MIN_QUERY_LENGTH = 3
 CURRENT_USER_ACTIVITIES_LIMIT = 5
-JIRA_FAILURE_COOLDOWN_SECONDS = 15
+JIRA_FAILURE_COOLDOWN_SECONDS = 5
 
 
 class ExternalSource(object):
@@ -113,9 +113,8 @@ class ExternalSource(object):
             current_activities = []
             direct_issue = None
             filtered_activities = []
-
-            current_activities = self.__jira_get_activities(query, self.jira_query)
             issue_match = re.match(JIRA_ISSUE_NAME_REGEX, query)
+            exact_issue_query = bool(issue_match and issue_match.group(1).lower() == query.lower())
             if query and issue_match:
                 issue_key = issue_match.group(1)
                 logging.info("Searching issue: %s" % issue_key)
@@ -128,6 +127,13 @@ class ExternalSource(object):
                             #     activities.append(direct_issue)
                     except Exception as error:
                         self.__mark_jira_temporarily_unavailable(error)
+
+            # For exact issue key lookups, avoid additional expensive JQL calls.
+            if exact_issue_query and direct_issue:
+                return [direct_issue]
+
+            if not exact_issue_query:
+                current_activities = self.__jira_get_activities(query, self.jira_query)
 
             is_project_query = self.__jira_is_issue_from_existing_project(query)
             if (not direct_issue

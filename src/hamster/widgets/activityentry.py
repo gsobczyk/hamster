@@ -60,6 +60,10 @@ def extract_search(fact):
     return search.lower()
 
 def extract_search_without_tags_and_category(text):
+    issue_match = re.search(r"([a-zA-Z][a-zA-Z0-9]*-[0-9]+)", text or "")
+    if issue_match:
+        return issue_match.group(1).lower()
+
     fact = Fact.parse(text)
     search = fact.activity
     return search.lower()
@@ -359,6 +363,12 @@ class CmdLineEntry(gtk.Entry):
                 self.update_suggestions(self.get_text())
                 self.update_suggestions_popup()
                 self.set_icon_from_icon_name(gtk.EntryIconPosition.PRIMARY, "emblem-default-symbolic")
+
+                text, suffix = self.complete_first()
+                if suffix:
+                    with self.handler_block(self.checker):
+                        self.update_entry("%s%s" % (text, suffix))
+                        self.select_region(len(text), -1)
                 return False
 
             glib.idle_add(apply_suggestions)
@@ -574,6 +584,8 @@ class ActivityEntry():
             self.widget = gtk.Entry(**kwds)
 
         self.category_widget = category_widget
+        self._ext_lookup_sequence = 0
+        self._ignore_ext_autocomplete = False
 
         # internal list of actions added to the suggestions
         self._action_list = []
@@ -604,8 +616,67 @@ class ActivityEntry():
 
         self.connect("icon-release", self.on_icon_release)
         self.connect("focus-in-event", self.on_focus_in_event)
+        self.connect("changed", self.on_changed)
         self.completion.connect('match-selected', self.on_match_selected)
         self.completion.connect("action_activated", self.on_action_activated)
+
+    def on_changed(self, widget):
+        if self._ignore_ext_autocomplete:
+            return
+
+        text = self.get_text().strip()
+        issue_match = re.match(r"^[a-zA-Z][a-zA-Z0-9]*-[0-9]+$", text)
+        if not issue_match:
+            return
+
+        issue_key = issue_match.group(0)
+        self._ext_lookup_sequence += 1
+        sequence = self._ext_lookup_sequence
+
+        def fetch_external_issue():
+            try:
+                activities = runtime.storage.get_ext_activities(issue_key.lower())
+            except Exception as error:
+                logger.warning("external lookup failed for issue '%s': %s", issue_key, error)
+                return
+
+            match = None
+            for activity in activities:
+                name = (activity.get("name") or "").strip()
+                if name.lower().startswith(issue_key.lower()):
+                    match = activity
+                    break
+
+            if not match:
+                return
+
+            def apply_match():
+                if sequence != self._ext_lookup_sequence:
+                    return False
+
+                current_text = self.get_text().strip()
+                if current_text.lower() != issue_key.lower():
+                    return False
+
+                completed_name = match.get("name") or ""
+                if not completed_name or len(completed_name) <= len(current_text):
+                    return False
+
+                self._ignore_ext_autocomplete = True
+                try:
+                    self.set_text(completed_name)
+                    self.select_region(len(current_text), -1)
+                    if self.category_widget and not self.category_widget.get_text().strip():
+                        category = (match.get("category") or "").strip()
+                        if category:
+                            self.category_widget.set_text(category)
+                finally:
+                    self._ignore_ext_autocomplete = False
+                return False
+
+            glib.idle_add(apply_match)
+
+        threading.Thread(target=fetch_external_issue, daemon=True).start()
 
     def add_action(self, name, text):
         """Add an action to the suggestions.
